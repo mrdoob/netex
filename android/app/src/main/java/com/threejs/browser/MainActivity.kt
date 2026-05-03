@@ -193,6 +193,7 @@ class MainActivity : AppCompatActivity() {
             } else false
         }
         binding.urlBar.setOnFocusChangeListener { _, hasFocus ->
+            binding.reloadButton.visibility = if (hasFocus) View.VISIBLE else View.GONE
             if (hasFocus) {
                 binding.urlBar.setText(currentFullUrl)
                 binding.urlBar.selectAll()
@@ -211,7 +212,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setUrlBubbleProgress(percent: Int, animate: Boolean = true) {
-        val bg = binding.urlBar.background as? LayerDrawable ?: return
+        val bg = binding.urlBubble.background as? LayerDrawable ?: return
         val clip = bg.findDrawableByLayerId(android.R.id.progress) as? ClipDrawable ?: return
 
         progressAnimator?.cancel()
