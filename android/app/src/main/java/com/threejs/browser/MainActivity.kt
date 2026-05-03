@@ -1,8 +1,14 @@
 package com.threejs.browser
 
+import android.animation.Animator
+import android.animation.AnimatorSet
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.graphics.drawable.ClipDrawable
+import android.graphics.drawable.LayerDrawable
 import android.net.Uri
+import android.view.animation.DecelerateInterpolator
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -43,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var detectorScript: String
     private var docStartInjectionAvailable: Boolean = false
     private var currentFullUrl: String = ""
+    private var progressAnimator: Animator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,8 +60,7 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            // Skip the bottom system-bar inset so the WebView extends under the gesture handle.
-            v.setPadding(sys.left, sys.top, sys.right, ime.bottom)
+            v.setPadding(sys.left, sys.top, sys.right, maxOf(sys.bottom, ime.bottom))
             WindowInsetsCompat.CONSUMED
         }
 
@@ -125,6 +131,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 DetectionStore.reset()
+                setUrlBubbleProgress(0, animate = false)
                 if (!docStartInjectionAvailable) {
                     // Racy fallback: best-effort injection before page scripts run.
                     view.evaluateJavascript(detectorScript, null)
@@ -145,13 +152,7 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
-                val bar = binding.progressBar
-                if (newProgress in 1..99) {
-                    bar.visibility = View.VISIBLE
-                    bar.progress = newProgress
-                } else {
-                    bar.visibility = View.GONE
-                }
+                setUrlBubbleProgress(newProgress)
             }
 
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
@@ -207,6 +208,50 @@ class MainActivity : AppCompatActivity() {
     private fun syncUrlBar(url: String?) {
         currentFullUrl = url.orEmpty()
         if (!binding.urlBar.hasFocus()) binding.urlBar.setText(abbreviateUrl(currentFullUrl))
+    }
+
+    private fun setUrlBubbleProgress(percent: Int, animate: Boolean = true) {
+        val bg = binding.urlBar.background as? LayerDrawable ?: return
+        val clip = bg.findDrawableByLayerId(android.R.id.progress) as? ClipDrawable ?: return
+
+        progressAnimator?.cancel()
+        progressAnimator = null
+
+        val target = percent.coerceIn(0, 100) * 100
+
+        if (!animate || target < clip.level) {
+            clip.alpha = PROGRESS_ALPHA
+            clip.level = target
+            return
+        }
+
+        clip.alpha = PROGRESS_ALPHA
+        progressAnimator = if (percent >= 100) {
+            val fill = ValueAnimator.ofInt(clip.level, 10000).apply {
+                duration = 200L
+                addUpdateListener { clip.level = it.animatedValue as Int }
+            }
+            val fade = ValueAnimator.ofInt(PROGRESS_ALPHA, 0).apply {
+                duration = 250L
+                startDelay = 80L
+                addUpdateListener { clip.alpha = it.animatedValue as Int }
+            }
+            AnimatorSet().apply {
+                playSequentially(fill, fade)
+                start()
+            }
+        } else {
+            ValueAnimator.ofInt(clip.level, target).apply {
+                duration = 300L
+                interpolator = DecelerateInterpolator()
+                addUpdateListener { clip.level = it.animatedValue as Int }
+                start()
+            }
+        }
+    }
+
+    private companion object {
+        const val PROGRESS_ALPHA = 80 // ~31% of 255
     }
 
     private fun abbreviateUrl(url: String): CharSequence {

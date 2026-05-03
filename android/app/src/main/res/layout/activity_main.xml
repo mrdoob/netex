@@ -5,13 +5,23 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@drawable/webview_rounded"
+        android:clipToOutline="true"
+        android:outlineProvider="background" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="8dp"
-        android:paddingVertical="6dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
         android:background="?attr/colorSurface"
         android:clipChildren="false"
         android:clipToPadding="false">
@@ -34,13 +44,14 @@
             android:layout_weight="1"
             android:background="@drawable/url_bar_bubble"
             android:paddingHorizontal="14dp"
-            android:paddingVertical="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="8dp"
             android:gravity="center"
             android:hint="@string/url_hint"
             android:inputType="textUri"
             android:imeOptions="actionGo"
             android:singleLine="true"
-            android:textSize="14sp"
+            android:textSize="15sp"
             android:importantForAutofill="no" />
 
         <FrameLayout
@@ -77,24 +88,5 @@
         </FrameLayout>
 
     </LinearLayout>
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:visibility="gone" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="?attr/colorOutlineVariant"
-        android:alpha="0.5" />
-
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
 
 </LinearLayout>
