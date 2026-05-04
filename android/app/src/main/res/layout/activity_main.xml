@@ -14,103 +14,110 @@
         android:clipToOutline="true"
         android:outlineProvider="background" />
 
-    <LinearLayout
+    <com.threejs.browser.DragInterceptLinearLayout
+        android:id="@+id/chromeContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="8dp"
-        android:paddingTop="14dp"
-        android:paddingBottom="14dp"
+        android:orientation="vertical"
         android:background="?attr/colorSurface"
         android:clipChildren="false"
         android:clipToPadding="false">
 
-        <FrameLayout
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:layout_marginEnd="14dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
             android:clipChildren="false"
             android:clipToPadding="false">
 
-            <ImageView
-                android:id="@+id/threeLogo"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/three_logo"
-                android:alpha="0.3"
-                android:contentDescription="three.js detection status" />
-
-            <TextView
-                android:id="@+id/revisionBadge"
+            <FrameLayout
+                android:id="@+id/threeLogoButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center_horizontal"
-                android:layout_marginBottom="-5dp"
-                android:background="@drawable/revision_badge_bg"
-                android:paddingHorizontal="2dp"
-                android:paddingVertical="0dp"
-                android:textSize="9sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnPrimary"
-                android:includeFontPadding="false"
-                android:visibility="invisible" />
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="14dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clipChildren="false"
+                android:clipToPadding="false">
 
-        </FrameLayout>
+                <ImageView
+                    android:id="@+id/threeLogo"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/three_logo"
+                    android:alpha="0.3"
+                    android:contentDescription="three.js detection status" />
 
-        <LinearLayout
-            android:id="@+id/urlBubble"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/url_bar_bubble"
-            android:paddingStart="14dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="8dp">
+                <TextView
+                    android:id="@+id/revisionBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:layout_marginBottom="-5dp"
+                    android:background="@drawable/revision_badge_bg"
+                    android:paddingHorizontal="2dp"
+                    android:paddingVertical="0dp"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:includeFontPadding="false"
+                    android:visibility="invisible" />
 
-            <EditText
-                android:id="@+id/urlBar"
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/urlBubble"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@null"
-                android:padding="0dp"
-                android:gravity="center"
-                android:hint="@string/url_hint"
-                android:inputType="textUri"
-                android:imeOptions="actionGo"
-                android:singleLine="true"
-                android:textSize="15sp"
-                android:importantForAutofill="no" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/url_bar_bubble"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="8dp">
+
+                <EditText
+                    android:id="@+id/urlBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:padding="0dp"
+                    android:gravity="center"
+                    android:hint="@string/url_hint"
+                    android:inputType="textUri"
+                    android:imeOptions="actionGo"
+                    android:singleLine="true"
+                    android:textSize="15sp"
+                    android:importantForAutofill="no" />
+
+            </LinearLayout>
 
             <ImageButton
-                android:id="@+id/reloadButton"
+                android:id="@+id/settingsButton"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="6dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_refresh"
+                android:src="@drawable/ic_settings"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Reload"
-                android:visibility="gone" />
+                android:contentDescription="Settings" />
 
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/settingsButton"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="14dp"
-            android:layout_marginEnd="6dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_settings"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Settings" />
+    </com.threejs.browser.DragInterceptLinearLayout>
 
-    </LinearLayout>
+    <com.threejs.browser.DragInterceptLinearLayout
+        android:id="@+id/tabsDrawer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:background="?attr/colorSurface" />
 
 </LinearLayout>

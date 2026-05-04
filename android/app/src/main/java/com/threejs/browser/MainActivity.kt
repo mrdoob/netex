@@ -8,14 +8,14 @@ import android.graphics.Bitmap
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
-import android.view.animation.DecelerateInterpolator
 import android.os.Bundle
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.webkit.ConsoleMessage
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
@@ -27,8 +27,10 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -39,7 +41,12 @@ import com.threejs.browser.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainActivity"
-private const val DEFAULT_URL = "https://threejs.org/examples/"
+private const val BLANK_URL = "about:blank"
+private const val PROGRESS_ALPHA = 80 // ~31% of 255
+private const val TAB_ROW_MARGIN_DP = 4
+private const val DRAWER_PADDING_DP = 8
+// Match the chrome bar's URL-bubble offset (8 chrome padding + 6+24+14 icon column).
+private const val DRAWER_HORIZONTAL_INSET_DP = 52
 
 class MainActivity : AppCompatActivity() {
 
@@ -48,8 +55,14 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var detectorScript: String
     private var docStartInjectionAvailable: Boolean = false
-    private var currentFullUrl: String = ""
     private var progressAnimator: Animator? = null
+    private var progressClip: ClipDrawable? = null
+    private var imeWasOpen = false
+
+    private data class Tab(var url: String, var title: String? = null, var state: Bundle? = null)
+
+    private val tabs = mutableListOf<Tab>()
+    private var activeIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,9 +70,17 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        progressClip = (binding.urlBubble.background as? LayerDrawable)
+            ?.findDrawableByLayerId(android.R.id.progress) as? ClipDrawable
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val imeOpen = ime.bottom > 0
+            if (imeWasOpen && !imeOpen && binding.urlBar.hasFocus()) {
+                binding.urlBar.clearFocus()
+            }
+            imeWasOpen = imeOpen
             v.setPadding(sys.left, sys.top, sys.right, maxOf(sys.bottom, ime.bottom))
             WindowInsetsCompat.CONSUMED
         }
@@ -70,12 +91,22 @@ class MainActivity : AppCompatActivity() {
         observeDetectionState()
         wireUrlBar()
         installBackHandler()
+        seedTabs()
+        setupDragHandler()
+        rebuildDrawer()
 
         if (savedInstanceState != null) {
             binding.webView.restoreState(savedInstanceState)
         } else {
-            loadUrl(DEFAULT_URL)
+            binding.webView.loadUrl(tabs[activeIndex].url)
+            focusUrlBar()
         }
+    }
+
+    private fun seedTabs() {
+        if (tabs.isNotEmpty()) return
+        tabs += Tab(BLANK_URL)
+        activeIndex = 0
     }
 
     private fun installBridge() {
@@ -107,6 +138,11 @@ class MainActivity : AppCompatActivity() {
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
 
         val webView = binding.webView
+        // Higher contrast than the chrome bar's colorSurface — darker in dark mode,
+        // brighter (pure white) in light mode.
+        webView.setBackgroundColor(
+            MaterialColors.getColor(webView, com.google.android.material.R.attr.colorSurfaceContainerLowest)
+        )
         val settings = webView.settings
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
@@ -136,6 +172,9 @@ class MainActivity : AppCompatActivity() {
                     // Racy fallback: best-effort injection before page scripts run.
                     view.evaluateJavascript(detectorScript, null)
                 }
+                val tab = tabs.getOrNull(activeIndex)
+                val isStateRestore = tab != null && url == tab.url
+                if (tab != null && !isStateRestore) tab.title = null
                 syncUrlBar(url)
             }
 
@@ -153,6 +192,11 @@ class MainActivity : AppCompatActivity() {
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 setUrlBubbleProgress(newProgress)
+            }
+
+            override fun onReceivedTitle(view: WebView, title: String?) {
+                if (tabs.isNotEmpty()) tabs[activeIndex].title = title
+                if (!binding.urlBar.hasFocus()) setUrlBarText(currentTabDisplay())
             }
 
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
@@ -189,31 +233,61 @@ class MainActivity : AppCompatActivity() {
             if (actionId == EditorInfo.IME_ACTION_GO) {
                 loadUrl(v.text.toString())
                 v.clearFocus()
+                hideKeyboard(v)
+                animateDrawerTo(0)
                 true
             } else false
         }
         binding.urlBar.setOnFocusChangeListener { _, hasFocus ->
-            binding.reloadButton.visibility = if (hasFocus) View.VISIBLE else View.GONE
             if (hasFocus) {
-                binding.urlBar.setText(currentFullUrl)
+                val url = tabs.getOrNull(activeIndex)?.url.orEmpty()
+                binding.urlBar.setText(if (url == BLANK_URL) "" else url)
                 binding.urlBar.selectAll()
             } else {
-                binding.urlBar.setText(abbreviateUrl(currentFullUrl))
+                setUrlBarText(currentTabDisplay())
             }
         }
-        binding.reloadButton.setOnClickListener {
-            binding.webView.reload()
+        val dismissUrlEditing = View.OnClickListener {
+            if (binding.urlBar.hasFocus()) {
+                binding.urlBar.clearFocus()
+                hideKeyboard(binding.urlBar)
+            }
         }
+        binding.threeLogoButton.setOnClickListener(dismissUrlEditing)
+        binding.settingsButton.setOnClickListener(dismissUrlEditing)
+    }
+
+    private fun hideKeyboard(view: View) {
+        ViewCompat.getWindowInsetsController(view)?.hide(WindowInsetsCompat.Type.ime())
+    }
+
+    private fun showKeyboard(view: View) {
+        ViewCompat.getWindowInsetsController(view)?.show(WindowInsetsCompat.Type.ime())
+    }
+
+    private fun setUrlBarText(text: String) {
+        if (binding.urlBar.text?.toString() != text) binding.urlBar.setText(text)
     }
 
     private fun syncUrlBar(url: String?) {
-        currentFullUrl = url.orEmpty()
-        if (!binding.urlBar.hasFocus()) binding.urlBar.setText(abbreviateUrl(currentFullUrl))
+        val safe = url.orEmpty()
+        if (tabs.isNotEmpty() && safe.isNotEmpty()) tabs[activeIndex].url = safe
+        if (!binding.urlBar.hasFocus()) setUrlBarText(currentTabDisplay())
+    }
+
+    private fun currentTabDisplay(): String =
+        tabLabel(tabs.getOrNull(activeIndex))
+
+    private fun tabLabel(tab: Tab?): String {
+        if (tab == null) return getString(R.string.loading)
+        val title = tab.title?.takeIf { it.isNotBlank() && it != BLANK_URL }
+        if (title != null) return title
+        if (tab.url.isEmpty() || tab.url == BLANK_URL) return getString(R.string.new_tab)
+        return getString(R.string.loading)
     }
 
     private fun setUrlBubbleProgress(percent: Int, animate: Boolean = true) {
-        val bg = binding.urlBubble.background as? LayerDrawable ?: return
-        val clip = bg.findDrawableByLayerId(android.R.id.progress) as? ClipDrawable ?: return
+        val clip = progressClip ?: return
 
         progressAnimator?.cancel()
         progressAnimator = null
@@ -251,38 +325,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private companion object {
-        const val PROGRESS_ALPHA = 80 // ~31% of 255
-    }
-
-    private fun abbreviateUrl(url: String): CharSequence {
-        if (url.isEmpty()) return ""
-        val uri = try { Uri.parse(url) } catch (_: Exception) { return url }
-        val host = uri.host ?: return url
-
-        val path = uri.encodedPath.orEmpty()
-        val tail = buildString {
-            if (path.isNotEmpty() && path != "/") append(path)
-            uri.encodedQuery?.let { append('?').append(it) }
-            uri.encodedFragment?.let { append('#').append(it) }
-        }
-        if (tail.isEmpty()) return host
-        // At least one "/..." when there's a query/fragment but no path slashes.
-        val ellipsisCount = maxOf(tail.count { it == '/' }, 1)
-
-        val builder = SpannableStringBuilder(host).append("/...".repeat(ellipsisCount))
-        val dim = MaterialColors.getColor(
-            binding.urlBar,
-            com.google.android.material.R.attr.colorOnSurfaceVariant
-        )
-        builder.setSpan(
-            ForegroundColorSpan(dim),
-            host.length, builder.length,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
-        return builder
-    }
-
     private fun loadUrl(input: String) {
         val trimmed = input.trim()
         if (trimmed.isEmpty()) return
@@ -290,9 +332,8 @@ class MainActivity : AppCompatActivity() {
             trimmed.startsWith("http://") || trimmed.startsWith("https://") -> trimmed
             trimmed.startsWith("about:") || trimmed.startsWith("file:") -> trimmed
             trimmed.contains('.') && !trimmed.contains(' ') -> "https://$trimmed"
-            else -> "https://www.google.com/search?q=${Uri.encode(trimmed)}"
+            else -> "https://duckduckgo.com/?q=${Uri.encode("!ducky $trimmed")}"
         }
-        currentFullUrl = normalized
         binding.webView.loadUrl(normalized)
     }
 
@@ -313,4 +354,104 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         binding.webView.saveState(outState)
     }
+
+    private fun setupDragHandler() {
+        var startHeight = 0
+        val onStart: () -> Unit = {
+            startHeight = binding.tabsDrawer.layoutParams.height
+            drawerAnimator?.cancel()
+        }
+        // Y axis grows downward → up-drag has negative dy → drawer grows.
+        val onMove: (Float) -> Unit = { dy ->
+            setDrawerHeight((startHeight - dy.toInt()).coerceAtLeast(0))
+        }
+        val onEnd: (Float) -> Unit = { /* stay where released */ }
+        listOf(binding.chromeContainer, binding.tabsDrawer).forEach { container ->
+            container.onDragStart = onStart
+            container.onDragMove = onMove
+            container.onDragEnd = onEnd
+        }
+    }
+
+    private var drawerAnimator: Animator? = null
+
+    private fun setDrawerHeight(h: Int) {
+        val drawer = binding.tabsDrawer
+        val params = drawer.layoutParams
+        if (params.height == h) return
+        params.height = h
+        drawer.layoutParams = params
+    }
+
+    private fun animateDrawerTo(target: Int) {
+        drawerAnimator?.cancel()
+        val current = binding.tabsDrawer.layoutParams.height
+        if (current == target) return
+        drawerAnimator = ValueAnimator.ofInt(current, target).apply {
+            duration = 200L
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { setDrawerHeight(it.animatedValue as Int) }
+            start()
+        }
+    }
+
+    private fun rebuildDrawer() {
+        val drawer = binding.tabsDrawer
+        drawer.removeAllViews()
+        val padH = dpToPx(DRAWER_HORIZONTAL_INSET_DP)
+        val padV = dpToPx(DRAWER_PADDING_DP)
+        drawer.setPadding(padH, padV, padH, padV)
+        tabs.forEachIndexed { index, tab ->
+            if (index == activeIndex) return@forEachIndexed
+            drawer.addView(makeTabRow(tabLabel(tab)) { switchToTab(index) })
+        }
+        drawer.addView(makeTabRow("+") { openBlankTab() })
+    }
+
+    private fun makeTabRow(label: CharSequence, onClick: () -> Unit): TextView {
+        val tv = TextView(this).apply {
+            text = label
+            background = AppCompatResources.getDrawable(context, R.drawable.tab_bubble_bg)
+            gravity = Gravity.CENTER
+            isSingleLine = true
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            textSize = 15f
+            setPadding(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(8))
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dpToPx(TAB_ROW_MARGIN_DP)
+                bottomMargin = dpToPx(TAB_ROW_MARGIN_DP)
+            }
+        }
+        return tv
+    }
+
+    private fun openBlankTab() {
+        tabs += Tab(BLANK_URL)
+        switchToTab(tabs.size - 1)
+        focusUrlBar()
+    }
+
+    private fun focusUrlBar() {
+        binding.urlBar.requestFocus()
+        binding.urlBar.post { showKeyboard(binding.urlBar) }
+    }
+
+    private fun switchToTab(index: Int) {
+        if (index == activeIndex || index !in tabs.indices) return
+        tabs[activeIndex].state = Bundle().also { binding.webView.saveState(it) }
+        activeIndex = index
+        // Detection / progress reset come for free via the onPageStarted that follows.
+        val incoming = tabs[index]
+        incoming.state?.let { binding.webView.restoreState(it) }
+            ?: binding.webView.loadUrl(incoming.url)
+        if (!binding.urlBar.hasFocus()) setUrlBarText(currentTabDisplay())
+        rebuildDrawer()
+        animateDrawerTo(0)
+    }
+
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 }
