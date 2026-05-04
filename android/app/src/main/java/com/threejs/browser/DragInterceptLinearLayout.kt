@@ -17,18 +17,26 @@ class DragInterceptLinearLayout @JvmOverloads constructor(
     var onDragMove: ((dyPx: Float) -> Unit)? = null
     var onDragEnd: ((dyPx: Float) -> Unit)? = null
 
+    private var downX = 0f
     private var downY = 0f
     private var dragging = false
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
 
+    private fun isVerticalDrag(ev: MotionEvent): Boolean {
+        val dy = ev.rawY - downY
+        val dx = ev.rawX - downX
+        return abs(dy) > slop && abs(dy) > abs(dx)
+    }
+
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                downX = ev.rawX
                 downY = ev.rawY
                 dragging = false
             }
             MotionEvent.ACTION_MOVE -> {
-                if (!dragging && abs(ev.rawY - downY) > slop) {
+                if (!dragging && isVerticalDrag(ev)) {
                     dragging = true
                     onDragStart?.invoke()
                     return true
@@ -42,12 +50,12 @@ class DragInterceptLinearLayout @JvmOverloads constructor(
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                // No child consumed DOWN — claim it so MOVE/UP still arrive,
-                // letting empty-background drags work.
+                // Claim DOWN so MOVE/UP arrive when no child consumed it
+                // (lets empty-background drags work).
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                if (!dragging && abs(ev.rawY - downY) > slop) {
+                if (!dragging && isVerticalDrag(ev)) {
                     dragging = true
                     onDragStart?.invoke()
                 }

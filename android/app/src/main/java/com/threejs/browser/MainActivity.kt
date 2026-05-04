@@ -11,7 +11,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
@@ -38,6 +40,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.color.MaterialColors
 import com.threejs.browser.databinding.ActivityMainBinding
+import kotlin.math.abs
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainActivity"
@@ -47,6 +50,8 @@ private const val TAB_ROW_MARGIN_DP = 4
 private const val DRAWER_PADDING_DP = 8
 // Match the chrome bar's URL-bubble offset (8 chrome padding + 6+24+14 icon column).
 private const val DRAWER_HORIZONTAL_INSET_DP = 52
+private const val SWIPE_ANIM_MS = 150L
+private const val MAX_SWIPE_FADE = 0.7f
 
 class MainActivity : AppCompatActivity() {
 
@@ -58,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private var progressAnimator: Animator? = null
     private var progressClip: ClipDrawable? = null
     private var imeWasOpen = false
+    private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
 
     private data class Tab(var url: String, var title: String? = null, var state: Bundle? = null)
 
@@ -403,7 +409,9 @@ class MainActivity : AppCompatActivity() {
         drawer.setPadding(padH, padV, padH, padV)
         tabs.forEachIndexed { index, tab ->
             if (index == activeIndex) return@forEachIndexed
-            drawer.addView(makeTabRow(tabLabel(tab)) { switchToTab(index) })
+            val row = makeTabRow(tabLabel(tab)) { switchToTab(index) }
+            attachSwipeToDelete(row) { closeTab(tab) }
+            drawer.addView(row)
         }
         drawer.addView(makeTabRow("+") { openBlankTab() })
     }
@@ -433,6 +441,59 @@ class MainActivity : AppCompatActivity() {
         tabs += Tab(BLANK_URL)
         switchToTab(tabs.size - 1)
         focusUrlBar()
+    }
+
+    private fun closeTab(tab: Tab) {
+        val index = tabs.indexOfFirst { it === tab }
+        if (index < 0 || index == activeIndex) return
+        tabs.removeAt(index)
+        if (index < activeIndex) activeIndex--
+        rebuildDrawer()
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun attachSwipeToDelete(view: View, onDelete: () -> Unit) {
+        var downX = 0f
+        var swiping = false
+        view.setOnTouchListener { v, ev ->
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = ev.rawX
+                    swiping = false
+                    false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = ev.rawX - downX
+                    if (!swiping && abs(dx) > touchSlop) {
+                        swiping = true
+                        v.parent.requestDisallowInterceptTouchEvent(true)
+                    }
+                    if (swiping) {
+                        v.translationX = dx
+                        v.alpha = swipeAlpha(dx, v.width)
+                        true
+                    } else false
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (!swiping) return@setOnTouchListener false
+                    val dx = v.translationX
+                    if (abs(dx) > v.width / 2f) {
+                        val target = if (dx > 0) v.width * 2f else -v.width * 2f
+                        v.animate().translationX(target).alpha(0f).setDuration(SWIPE_ANIM_MS)
+                            .withEndAction { onDelete() }.start()
+                    } else {
+                        v.animate().translationX(0f).alpha(1f).setDuration(SWIPE_ANIM_MS).start()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun swipeAlpha(dx: Float, width: Int): Float {
+        if (width <= 0) return 1f
+        return 1f - (abs(dx) / width).coerceIn(0f, MAX_SWIPE_FADE)
     }
 
     private fun focusUrlBar() {
