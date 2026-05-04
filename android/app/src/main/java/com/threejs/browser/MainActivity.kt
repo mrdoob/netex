@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.LayerDrawable
@@ -65,15 +66,6 @@ class MainActivity : AppCompatActivity() {
     private var progressClip: ClipDrawable? = null
     private var imeWasOpen = false
     private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
-
-    // Full IANA TLD list (ASCII, ~1286 entries) — bundled as a raw resource and
-    // loaded once on first lookup. `three.js`, `main.py`, etc. fall through to
-    // search since their suffixes aren't real TLDs.
-    private val knownTlds: Set<String> by lazy {
-        resources.openRawResource(R.raw.tlds).bufferedReader().useLines { lines ->
-            lines.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.toSet()
-        }
-    }
 
     private data class Tab(var url: String, var title: String? = null, var state: Bundle? = null)
 
@@ -359,7 +351,17 @@ class MainActivity : AppCompatActivity() {
         if (host.equals("localhost", ignoreCase = true)) return true
         if (Patterns.IP_ADDRESS.matcher(host).matches()) return true
         val tld = host.substringAfterLast('.', "").lowercase()
-        return tld.isNotEmpty() && tld in knownTlds
+        return tld in knownTlds(this)
+    }
+
+    companion object {
+        // Bundled IANA TLD list; file extensions like ".js" / ".py" fall through to search.
+        private var cachedTlds: Set<String>? = null
+
+        private fun knownTlds(context: Context): Set<String> = cachedTlds ?: context
+            .resources.openRawResource(R.raw.tlds)
+            .bufferedReader().useLines { it.filter(String::isNotBlank).toSet() }
+            .also { cachedTlds = it }
     }
 
     private fun installBackHandler() {
