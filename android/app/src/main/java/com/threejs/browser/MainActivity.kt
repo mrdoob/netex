@@ -10,6 +10,7 @@ import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.util.Patterns
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -64,6 +65,15 @@ class MainActivity : AppCompatActivity() {
     private var progressClip: ClipDrawable? = null
     private var imeWasOpen = false
     private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
+
+    // Full IANA TLD list (ASCII, ~1286 entries) — bundled as a raw resource and
+    // loaded once on first lookup. `three.js`, `main.py`, etc. fall through to
+    // search since their suffixes aren't real TLDs.
+    private val knownTlds: Set<String> by lazy {
+        resources.openRawResource(R.raw.tlds).bufferedReader().useLines { lines ->
+            lines.mapNotNull { it.trim().takeIf(String::isNotEmpty) }.toSet()
+        }
+    }
 
     private data class Tab(var url: String, var title: String? = null, var state: Bundle? = null)
 
@@ -337,10 +347,19 @@ class MainActivity : AppCompatActivity() {
         val normalized = when {
             trimmed.startsWith("http://") || trimmed.startsWith("https://") -> trimmed
             trimmed.startsWith("about:") || trimmed.startsWith("file:") -> trimmed
-            trimmed.contains('.') && !trimmed.contains(' ') -> "https://$trimmed"
+            looksLikeUrl(trimmed) -> "https://$trimmed"
             else -> "https://duckduckgo.com/?q=${Uri.encode("!ducky $trimmed")}"
         }
         binding.webView.loadUrl(normalized)
+    }
+
+    private fun looksLikeUrl(input: String): Boolean {
+        if (input.contains(' ')) return false
+        val host = Uri.parse("https://$input").host?.takeIf { it.isNotEmpty() } ?: return false
+        if (host.equals("localhost", ignoreCase = true)) return true
+        if (Patterns.IP_ADDRESS.matcher(host).matches()) return true
+        val tld = host.substringAfterLast('.', "").lowercase()
+        return tld.isNotEmpty() && tld in knownTlds
     }
 
     private fun installBackHandler() {
