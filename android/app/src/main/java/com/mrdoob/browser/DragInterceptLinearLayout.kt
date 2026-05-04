@@ -1,4 +1,4 @@
-package com.threejs.browser
+package com.mrdoob.browser
 
 import android.annotation.SuppressLint
 import android.content.Context

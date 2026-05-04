@@ -1,4 +1,4 @@
-package com.threejs.browser
+package com.mrdoob.browser
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

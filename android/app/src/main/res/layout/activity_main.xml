@@ -14,7 +14,7 @@
         android:clipToOutline="true"
         android:outlineProvider="background" />
 
-    <com.threejs.browser.DragInterceptLinearLayout
+    <com.mrdoob.browser.DragInterceptLinearLayout
         android:id="@+id/chromeContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -111,9 +111,9 @@
 
         </LinearLayout>
 
-    </com.threejs.browser.DragInterceptLinearLayout>
+    </com.mrdoob.browser.DragInterceptLinearLayout>
 
-    <com.threejs.browser.DragInterceptLinearLayout
+    <com.mrdoob.browser.DragInterceptLinearLayout
         android:id="@+id/tabsDrawer"
         android:layout_width="match_parent"
         android:layout_height="0dp"

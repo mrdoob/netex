@@ -1,4 +1,4 @@
-package com.threejs.browser
+package com.mrdoob.browser
 
 import android.animation.Animator
 import android.animation.AnimatorSet
@@ -41,7 +41,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.color.MaterialColors
-import com.threejs.browser.databinding.ActivityMainBinding
+import com.mrdoob.browser.databinding.ActivityMainBinding
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 

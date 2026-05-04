@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.threejs.browser"
+    namespace = "com.mrdoob.browser"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.threejs.browser"
+        applicationId = "com.mrdoob.browser"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
