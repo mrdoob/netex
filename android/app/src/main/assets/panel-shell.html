@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" id="hljs-theme" href="">
+<style>
+:root {
+    --fg: #cccccc;
+    --panel-bg: #1f1f23;
+    --viewer-bg: #2c2c30;
+}
+body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--fg); }
+
+#source-tab, #network-tab { display: none; }
+#source-tab.active, #network-tab.active { display: block; }
+
+#source-tab pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; }
+code.hljs { background:transparent !important; padding:0 !important; }
+
+.empty { padding:16px; opacity:0.6; }
+
+.req { border-bottom:1px solid rgba(127,127,127,0.2); }
+.req > summary { padding:8px 12px; cursor:pointer; list-style:none; display:flex; gap:8px; align-items:center; background:var(--panel-bg); }
+.req > summary::-webkit-details-marker { display:none; }
+.req[open] > summary { position:sticky; top:0; z-index:1; }
+
+.method { font-weight:bold; padding:2px 6px; border-radius:4px; min-width:42px; text-align:center; flex-shrink:0; }
+.method.GET { background:rgba(60,130,80,0.25); }
+.method.POST { background:rgba(60,100,160,0.25); }
+.method.PUT, .method.PATCH { background:rgba(160,120,40,0.25); }
+.method.DELETE { background:rgba(180,60,60,0.25); }
+
+.url { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.status { font-weight:bold; flex-shrink:0; min-width:36px; text-align:right; }
+.status.s2xx { color:#4ade80; }
+.status.s3xx { color:#fbbf24; }
+.status.s4xx, .status.s5xx { color:#f87171; }
+.status.s0 { opacity:0.5; }
+
+.body { background:transparent; }
+.body pre { margin:0; padding:12px; font-size:11px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; }
+.body img { display:block; max-width:100%; height:auto; padding:12px; box-sizing:border-box; background:var(--viewer-bg); }
+.body model-viewer { display:block; width:100%; height:300px; background:var(--viewer-bg); }
+</style>
+</head>
+<body>
+<div id="source-tab" class="active"><pre><code class="language-html"></code></pre></div>
+<div id="network-tab"><p class="empty">No requests captured yet.</p></div>
+<script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-html.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
+<!--__PANEL_JS__-->
+</body>
+</html>

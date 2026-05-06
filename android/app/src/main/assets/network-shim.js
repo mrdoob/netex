@@ -1,0 +1,162 @@
+// Patches window.fetch and XMLHttpRequest to forward each request/response
+// to the AndroidNetwork bridge. Image/model responses are stashed as Blobs
+// in window.__threeBrowser.blobs and only encoded to data: URLs lazily when
+// the panel asks via window.__threeBrowser.findBlob(requestId).
+(function () {
+  var ns = window.__threeBrowser || (window.__threeBrowser = {});
+  if (ns.installed) return;
+  ns.installed = true;
+
+  var MAX_BODY = 256 * 1024;        // 256 KB
+  var MAX_BINARY = 4 * 1024 * 1024; // 4 MB
+  var MAX_BLOBS = 64;               // FIFO cap so long-lived pages don't pin memory
+
+  if (!ns.blobs) ns.blobs = new Map();
+
+  function clip(s) {
+    if (typeof s !== 'string') return '';
+    return s.length > MAX_BODY ? s.slice(0, MAX_BODY) + '\n…[truncated]' : s;
+  }
+
+  function isBinaryDisplayable(contentType) {
+    if (!contentType) return false;
+    return /^(image|model)\//i.test(contentType);
+  }
+
+  function post(record) {
+    try {
+      if (typeof AndroidNetwork !== 'undefined' && AndroidNetwork.postMessage) {
+        AndroidNetwork.postMessage(JSON.stringify(record));
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function newRequestId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    // Fallback for older WebViews.
+    return 'r-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
+  }
+
+  function captureBlob(blob) {
+    if (!blob || blob.size > MAX_BINARY) return '';
+    if (ns.blobs.size >= MAX_BLOBS) {
+      var oldest = ns.blobs.keys().next().value;
+      if (oldest) ns.blobs.delete(oldest);
+    }
+    var rid = newRequestId();
+    ns.blobs.set(rid, blob);
+    return rid;
+  }
+
+  ns.readBlob = function (rid) {
+    var blob = ns.blobs.get(rid);
+    if (!blob) {
+      post({ type: 'blob-response', requestId: rid, body: '' });
+      return;
+    }
+    var reader = new FileReader();
+    reader.onloadend = function () {
+      post({ type: 'blob-response', requestId: rid, body: reader.result || '' });
+    };
+    reader.onerror = function () {
+      post({ type: 'blob-response', requestId: rid, body: '' });
+    };
+    reader.readAsDataURL(blob);
+  };
+
+  // Native calls this on a panel expand. Each frame has its own __threeBrowser
+  // namespace; recurse through same-origin frames to find the one with the blob.
+  ns.findBlob = function (rid) {
+    function visit(win) {
+      try {
+        var nsi = win.__threeBrowser;
+        if (nsi && nsi.blobs && nsi.blobs.has(rid)) {
+          nsi.readBlob(rid);
+          return true;
+        }
+        for (var i = 0; i < win.frames.length; i++) {
+          if (visit(win.frames[i])) return true;
+        }
+      } catch (e) { /* cross-origin frame */ }
+      return false;
+    }
+    visit(window);
+  };
+
+  var origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = function (input, init) {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      var method = (init && init.method) || (input && input.method) || 'GET';
+      var start = Date.now();
+      var promise = origFetch.apply(this, arguments);
+      promise.then(function (response) {
+        var ct = response.headers.get('content-type') || '';
+        var emit = function (body, requestId) {
+          post({
+            method: method.toUpperCase(),
+            url: url,
+            status: response.status,
+            body: body,
+            contentType: ct,
+            duration: Date.now() - start,
+            requestId: requestId || ''
+          });
+        };
+        if (isBinaryDisplayable(ct)) {
+          response.clone().blob()
+            .then(function (blob) { emit('', captureBlob(blob)); })
+            .catch(function () { emit('', ''); });
+        } else {
+          response.clone().text()
+            .then(function (b) { emit(clip(b), ''); })
+            .catch(function () {});
+        }
+      }).catch(function (err) {
+        post({
+          method: method.toUpperCase(),
+          url: url,
+          status: 0,
+          body: '',
+          contentType: '',
+          duration: Date.now() - start,
+          requestId: '',
+          error: String(err)
+        });
+      });
+      return promise;
+    };
+  }
+
+  var XHR = window.XMLHttpRequest;
+  if (XHR) {
+    var origOpen = XHR.prototype.open;
+    var origSend = XHR.prototype.send;
+    XHR.prototype.open = function (method, url) {
+      this._netMethod = method;
+      this._netUrl = url;
+      return origOpen.apply(this, arguments);
+    };
+    XHR.prototype.send = function () {
+      var xhr = this;
+      var start = Date.now();
+      xhr.addEventListener('loadend', function () {
+        var ct = xhr.getResponseHeader('content-type') || '';
+        var body = '';
+        if (!isBinaryDisplayable(ct)) {
+          try { body = xhr.responseText || ''; } catch (e) {}
+        }
+        post({
+          method: (xhr._netMethod || 'GET').toUpperCase(),
+          url: xhr._netUrl || '',
+          status: xhr.status,
+          body: clip(body),
+          contentType: ct,
+          duration: Date.now() - start,
+          requestId: ''
+        });
+      });
+      return origSend.apply(this, arguments);
+    };
+  }
+})();

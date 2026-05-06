@@ -5,13 +5,11 @@ import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.text.TextUtils
 import android.util.Log
 import android.util.Patterns
 import android.view.View
@@ -38,20 +36,22 @@ import androidx.webkit.WebViewFeature
 import com.google.android.material.color.MaterialColors
 import com.mrdoob.browser.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
-import org.json.JSONTokener
+import org.json.JSONObject
 
 private const val TAG = "MainActivity"
 private const val BLANK_URL = "about:blank"
 private const val PROGRESS_ALPHA = 80 // ~31% of 255
-private const val CDN_HLJS = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build"
-private const val CDN_BEAUTIFY = "https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib"
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val bridge = ThreeDevtoolsBridge()
+    private lateinit var panel: PanelRenderer
 
-    private lateinit var detectorScript: String
+    private val threeBridge = ThreeDevtoolsBridge()
+    private val networkBridge = NetworkBridge { rid, dataUrl -> panel.deliverBlob(rid, dataUrl) }
+    private val panelBridge = PanelBridge { rid -> fetchBlobFromMain(rid) }
+
+    private lateinit var documentStartScript: String
     private var docStartInjectionAvailable: Boolean = false
     private var progressAnimator: Animator? = null
     private var progressClip: ClipDrawable? = null
@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
 
     private var currentUrl: String = BLANK_URL
     private var currentTitle: String? = null
+    private var currentTab = PanelRenderer.Tab.SOURCE
     private var sourceDirty = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,14 +84,17 @@ class MainActivity : AppCompatActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
-        detectorScript = DetectorScripts.load(this)
-        installBridge()
+        documentStartScript = DocumentStartScripts.load(this)
+        installBridges()
         configureWebView()
-        configureSourceView()
+        panel = PanelRenderer(this, binding.panelView, binding.webView).also { it.init() }
         observeDetectionState()
+        observeNetworkLog()
         wireUrlBar()
+        wirePanelHeader()
         installBackHandler()
         setupDragHandler()
+        updateTabStyles()
 
         if (savedInstanceState != null) {
             binding.webView.restoreState(savedInstanceState)
@@ -100,19 +104,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun installBridge() {
+    private fun installBridges() {
         val webView = binding.webView
 
         docStartInjectionAvailable = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         if (docStartInjectionAvailable) {
-            WebViewCompat.addDocumentStartJavaScript(webView, detectorScript, setOf("*"))
+            WebViewCompat.addDocumentStartJavaScript(webView, documentStartScript, setOf("*"))
         }
 
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            WebViewCompat.addWebMessageListener(webView, ThreeDevtoolsBridge.JS_OBJECT_NAME, setOf("*"), bridge)
+            WebViewCompat.addWebMessageListener(webView, ThreeDevtoolsBridge.JS_OBJECT_NAME, setOf("*"), threeBridge)
+            WebViewCompat.addWebMessageListener(webView, NetworkBridge.JS_OBJECT_NAME, setOf("*"), networkBridge)
+            WebViewCompat.addWebMessageListener(binding.panelView, PanelBridge.JS_OBJECT_NAME, setOf("*"), panelBridge)
         } else {
             @SuppressLint("AddJavascriptInterface")
-            webView.addJavascriptInterface(bridge.Fallback(), ThreeDevtoolsBridge.JS_OBJECT_NAME)
+            run {
+                webView.addJavascriptInterface(threeBridge.Fallback(), ThreeDevtoolsBridge.JS_OBJECT_NAME)
+                webView.addJavascriptInterface(networkBridge.Fallback(), NetworkBridge.JS_OBJECT_NAME)
+                binding.panelView.addJavascriptInterface(panelBridge.Fallback(), PanelBridge.JS_OBJECT_NAME)
+            }
         }
 
         if (!docStartInjectionAvailable) {
@@ -129,8 +139,6 @@ class MainActivity : AppCompatActivity() {
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
 
         val webView = binding.webView
-        // Higher contrast than the chrome bar's colorSurface — darker in dark mode,
-        // brighter (pure white) in light mode.
         webView.setBackgroundColor(
             MaterialColors.getColor(webView, com.google.android.material.R.attr.colorSurfaceContainerLowest)
         )
@@ -141,14 +149,12 @@ class MainActivity : AppCompatActivity() {
         settings.databaseEnabled = true
         settings.loadWithOverviewMode = true
         settings.useWideViewPort = true
-        // Don't scale page text with the system font size — match Chrome's default.
         settings.textZoom = 100
         settings.mediaPlaybackRequiresUserGesture = false
         settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
         settings.setSupportZoom(true)
         settings.builtInZoomControls = true
         settings.displayZoomControls = false
-        // Strip the WebView ";wv" UA token so sites don't serve a degraded experience.
         settings.userAgentString = settings.userAgentString
             .replace("; wv", "")
             .replace(" wv", "") + " ThreeBrowser/0.1"
@@ -158,10 +164,11 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 DetectionStore.reset()
+                NetworkLog.reset()
                 setUrlBubbleProgress(0, animate = false)
                 if (!docStartInjectionAvailable) {
                     // Racy fallback: best-effort injection before page scripts run.
-                    view.evaluateJavascript(detectorScript, null)
+                    view.evaluateJavascript(documentStartScript, null)
                 }
                 if (url != null && url != currentUrl) currentTitle = null
                 syncUrlBar(url)
@@ -174,7 +181,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
                 syncUrlBar(url)
-                // SPA route changes (history.pushState) skip onPageFinished — keep the source view honest.
+                // SPA route changes (history.pushState) skip onPageFinished — keep source honest.
                 sourceDirty = true
                 maybeRefreshSource()
             }
@@ -205,62 +212,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun configureSourceView() {
-        val sv = binding.sourceView
-        sv.setBackgroundColor(
-            MaterialColors.getColor(sv, com.google.android.material.R.attr.colorSurfaceContainerLowest)
-        )
-        // JS is needed so highlight.js can run inside the source WebView.
-        sv.settings.javaScriptEnabled = true
-    }
-
-    private fun updateSourceView() {
-        binding.webView.evaluateJavascript("document.documentElement.outerHTML") { json ->
-            val raw = try {
-                JSONTokener(json).nextValue() as? String
-            } catch (e: Exception) { null } ?: return@evaluateJavascript
-            val escaped = TextUtils.htmlEncode(raw)
-            val nightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val hlTheme = if (nightMode) "github-dark" else "github"
-            val wrapped = """
-                <!doctype html>
-                <html><head>
-                <meta name="viewport" content="width=device-width,initial-scale=1">
-                <link rel="stylesheet" href="$CDN_HLJS/styles/$hlTheme.min.css">
-                <style>
-                    body { margin:0; padding:0; }
-                    pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; }
-                    code.hljs { background:transparent !important; padding:0 !important; }
-                </style>
-                </head>
-                <body>
-                <pre><code class="language-html">$escaped</code></pre>
-                <script src="$CDN_BEAUTIFY/beautify.min.js"></script>
-                <script src="$CDN_BEAUTIFY/beautify-css.min.js"></script>
-                <script src="$CDN_BEAUTIFY/beautify-html.min.js"></script>
-                <script src="$CDN_HLJS/highlight.min.js"></script>
-                <script>
-                    var code = document.querySelector('code');
-                    if (typeof html_beautify === 'function') {
-                        code.textContent = html_beautify(code.textContent, {
-                            indent_size: 2,
-                            indent_with_tabs: false,
-                            preserve_newlines: true,
-                            max_preserve_newlines: 1,
-                            wrap_line_length: 0
-                        });
-                    }
-                    hljs.highlightAll();
-                </script>
-                </body></html>
-            """.trimIndent()
-            binding.sourceView.loadDataWithBaseURL(
-                "https://cdn.jsdelivr.net/", wrapped, "text/html", "UTF-8", null
-            )
-        }
-    }
-
     private fun observeDetectionState() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -275,6 +226,22 @@ class MainActivity : AppCompatActivity() {
                             binding.revisionBadge.text = state.revision.filter { it.isDigit() }
                             binding.revisionBadge.visibility = View.VISIBLE
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeNetworkLog() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                NetworkLog.events.collect { event ->
+                    when (event) {
+                        is NetworkLog.Event.Added -> {
+                            val displayUrl = UrlDisplay.shorten(event.record.url, currentUrl)
+                            panel.appendNetworkRow(event.record, displayUrl)
+                        }
+                        NetworkLog.Event.Cleared -> panel.clearNetwork()
                     }
                 }
             }
@@ -307,6 +274,27 @@ class MainActivity : AppCompatActivity() {
         }
         binding.threeLogoButton.setOnClickListener(dismissUrlEditing)
         binding.settingsButton.setOnClickListener(dismissUrlEditing)
+    }
+
+    private fun wirePanelHeader() {
+        binding.tabSource.setOnClickListener { switchTab(PanelRenderer.Tab.SOURCE) }
+        binding.tabNetwork.setOnClickListener { switchTab(PanelRenderer.Tab.NETWORK) }
+        binding.panelReload.setOnClickListener { binding.webView.reload() }
+    }
+
+    private fun switchTab(tab: PanelRenderer.Tab) {
+        if (tab == currentTab) return
+        currentTab = tab
+        updateTabStyles()
+        panel.setTab(tab)
+        if (tab == PanelRenderer.Tab.SOURCE) maybeRefreshSource()
+    }
+
+    private fun updateTabStyles() {
+        val active = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurface)
+        val inactive = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurfaceVariant)
+        binding.tabSource.setTextColor(if (currentTab == PanelRenderer.Tab.SOURCE) active else inactive)
+        binding.tabNetwork.setTextColor(if (currentTab == PanelRenderer.Tab.NETWORK) active else inactive)
     }
 
     private fun hideKeyboard(view: View) {
@@ -429,7 +417,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupDragHandler() {
         var startHeight = 0
         val onStart: () -> Unit = {
-            startHeight = binding.sourceView.layoutParams.height
+            startHeight = binding.bottomPanel.layoutParams.height
             panelAnimator?.cancel()
         }
         // Y axis grows downward → up-drag has negative dy → panel grows.
@@ -443,25 +431,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setPanelHeight(h: Int) {
-        val v = binding.sourceView
-        val params = v.layoutParams
+        val p = binding.bottomPanel
+        val params = p.layoutParams
         if (params.height == h) return
         val wasClosed = params.height == 0
         params.height = h
-        v.layoutParams = params
-        if (wasClosed && h > 0) maybeRefreshSource()
-    }
-
-    private fun maybeRefreshSource() {
-        if (sourceDirty && binding.sourceView.layoutParams.height > 0) {
-            sourceDirty = false
-            updateSourceView()
-        }
+        p.layoutParams = params
+        if (wasClosed && h > 0 && currentTab == PanelRenderer.Tab.SOURCE) maybeRefreshSource()
     }
 
     private fun animatePanelTo(target: Int) {
         panelAnimator?.cancel()
-        val current = binding.sourceView.layoutParams.height
+        val current = binding.bottomPanel.layoutParams.height
         if (current == target) return
         panelAnimator = ValueAnimator.ofInt(current, target).apply {
             duration = 200L
@@ -469,5 +450,20 @@ class MainActivity : AppCompatActivity() {
             addUpdateListener { setPanelHeight(it.animatedValue as Int) }
             start()
         }
+    }
+
+    private fun maybeRefreshSource() {
+        if (!sourceDirty) return
+        if (currentTab != PanelRenderer.Tab.SOURCE) return
+        if (binding.bottomPanel.layoutParams.height <= 0) return
+        sourceDirty = false
+        panel.refreshSource()
+    }
+
+    private fun fetchBlobFromMain(rid: String) {
+        binding.webView.evaluateJavascript(
+            "window.__threeBrowser && window.__threeBrowser.findBlob(${JSONObject.quote(rid)})",
+            null
+        )
     }
 }
