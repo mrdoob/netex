@@ -113,11 +113,10 @@
 
     </com.mrdoob.browser.DragInterceptLinearLayout>
 
-    <com.mrdoob.browser.DragInterceptLinearLayout
-        android:id="@+id/tabsDrawer"
+    <WebView
+        android:id="@+id/sourceView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:orientation="vertical"
         android:background="?attr/colorSurface" />
 
 </LinearLayout>

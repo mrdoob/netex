@@ -5,21 +5,18 @@ import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.text.TextUtils
 import android.util.Log
 import android.util.Patterns
-import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.webkit.ConsoleMessage
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
@@ -31,10 +28,8 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -42,18 +37,14 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.color.MaterialColors
 import com.mrdoob.browser.databinding.ActivityMainBinding
-import kotlin.math.abs
 import kotlinx.coroutines.launch
+import org.json.JSONTokener
 
 private const val TAG = "MainActivity"
 private const val BLANK_URL = "about:blank"
 private const val PROGRESS_ALPHA = 80 // ~31% of 255
-private const val TAB_ROW_MARGIN_DP = 4
-private const val DRAWER_PADDING_DP = 8
-// Match the chrome bar's URL-bubble offset (8 chrome padding + 6+24+14 icon column).
-private const val DRAWER_HORIZONTAL_INSET_DP = 52
-private const val SWIPE_ANIM_MS = 150L
-private const val MAX_SWIPE_FADE = 0.7f
+private const val CDN_HLJS = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build"
+private const val CDN_BEAUTIFY = "https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib"
 
 class MainActivity : AppCompatActivity() {
 
@@ -65,12 +56,11 @@ class MainActivity : AppCompatActivity() {
     private var progressAnimator: Animator? = null
     private var progressClip: ClipDrawable? = null
     private var imeWasOpen = false
-    private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
+    private var panelAnimator: Animator? = null
 
-    private data class Tab(var url: String, var title: String? = null, var state: Bundle? = null)
-
-    private val tabs = mutableListOf<Tab>()
-    private var activeIndex = 0
+    private var currentUrl: String = BLANK_URL
+    private var currentTitle: String? = null
+    private var sourceDirty = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,25 +86,18 @@ class MainActivity : AppCompatActivity() {
         detectorScript = DetectorScripts.load(this)
         installBridge()
         configureWebView()
+        configureSourceView()
         observeDetectionState()
         wireUrlBar()
         installBackHandler()
-        seedTabs()
         setupDragHandler()
-        rebuildDrawer()
 
         if (savedInstanceState != null) {
             binding.webView.restoreState(savedInstanceState)
         } else {
-            binding.webView.loadUrl(tabs[activeIndex].url)
+            binding.webView.loadUrl(BLANK_URL)
             focusUrlBar()
         }
-    }
-
-    private fun seedTabs() {
-        if (tabs.isNotEmpty()) return
-        tabs += Tab(BLANK_URL)
-        activeIndex = 0
     }
 
     private fun installBridge() {
@@ -180,14 +163,20 @@ class MainActivity : AppCompatActivity() {
                     // Racy fallback: best-effort injection before page scripts run.
                     view.evaluateJavascript(detectorScript, null)
                 }
-                val tab = tabs.getOrNull(activeIndex)
-                val isStateRestore = tab != null && url == tab.url
-                if (tab != null && !isStateRestore) tab.title = null
+                if (url != null && url != currentUrl) currentTitle = null
                 syncUrlBar(url)
+            }
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                sourceDirty = true
+                maybeRefreshSource()
             }
 
             override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
                 syncUrlBar(url)
+                // SPA route changes (history.pushState) skip onPageFinished — keep the source view honest.
+                sourceDirty = true
+                maybeRefreshSource()
             }
 
             override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
@@ -203,8 +192,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onReceivedTitle(view: WebView, title: String?) {
-                if (tabs.isNotEmpty()) tabs[activeIndex].title = title
-                if (!binding.urlBar.hasFocus()) setUrlBarText(currentTabDisplay())
+                currentTitle = title
+                if (!binding.urlBar.hasFocus()) setUrlBarText(currentDisplay())
             }
 
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
@@ -213,6 +202,62 @@ class MainActivity : AppCompatActivity() {
                 }
                 return true
             }
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun configureSourceView() {
+        val sv = binding.sourceView
+        sv.setBackgroundColor(
+            MaterialColors.getColor(sv, com.google.android.material.R.attr.colorSurfaceContainerLowest)
+        )
+        // JS is needed so highlight.js can run inside the source WebView.
+        sv.settings.javaScriptEnabled = true
+    }
+
+    private fun updateSourceView() {
+        binding.webView.evaluateJavascript("document.documentElement.outerHTML") { json ->
+            val raw = try {
+                JSONTokener(json).nextValue() as? String
+            } catch (e: Exception) { null } ?: return@evaluateJavascript
+            val escaped = TextUtils.htmlEncode(raw)
+            val nightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            val hlTheme = if (nightMode) "github-dark" else "github"
+            val wrapped = """
+                <!doctype html>
+                <html><head>
+                <meta name="viewport" content="width=device-width,initial-scale=1">
+                <link rel="stylesheet" href="$CDN_HLJS/styles/$hlTheme.min.css">
+                <style>
+                    body { margin:0; padding:0; }
+                    pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; }
+                    code.hljs { background:transparent !important; padding:0 !important; }
+                </style>
+                </head>
+                <body>
+                <pre><code class="language-html">$escaped</code></pre>
+                <script src="$CDN_BEAUTIFY/beautify.min.js"></script>
+                <script src="$CDN_BEAUTIFY/beautify-css.min.js"></script>
+                <script src="$CDN_BEAUTIFY/beautify-html.min.js"></script>
+                <script src="$CDN_HLJS/highlight.min.js"></script>
+                <script>
+                    var code = document.querySelector('code');
+                    if (typeof html_beautify === 'function') {
+                        code.textContent = html_beautify(code.textContent, {
+                            indent_size: 2,
+                            indent_with_tabs: false,
+                            preserve_newlines: true,
+                            max_preserve_newlines: 1,
+                            wrap_line_length: 0
+                        });
+                    }
+                    hljs.highlightAll();
+                </script>
+                </body></html>
+            """.trimIndent()
+            binding.sourceView.loadDataWithBaseURL(
+                "https://cdn.jsdelivr.net/", wrapped, "text/html", "UTF-8", null
+            )
         }
     }
 
@@ -242,17 +287,16 @@ class MainActivity : AppCompatActivity() {
                 loadUrl(v.text.toString())
                 v.clearFocus()
                 hideKeyboard(v)
-                animateDrawerTo(0)
+                animatePanelTo(0)
                 true
             } else false
         }
         binding.urlBar.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                val url = tabs.getOrNull(activeIndex)?.url.orEmpty()
-                binding.urlBar.setText(if (url == BLANK_URL) "" else url)
+                binding.urlBar.setText(if (currentUrl == BLANK_URL) "" else currentUrl)
                 binding.urlBar.selectAll()
             } else {
-                setUrlBarText(currentTabDisplay())
+                setUrlBarText(currentDisplay())
             }
         }
         val dismissUrlEditing = View.OnClickListener {
@@ -273,24 +317,24 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.getWindowInsetsController(view)?.show(WindowInsetsCompat.Type.ime())
     }
 
+    private fun focusUrlBar() {
+        binding.urlBar.requestFocus()
+        binding.urlBar.post { showKeyboard(binding.urlBar) }
+    }
+
     private fun setUrlBarText(text: String) {
         if (binding.urlBar.text?.toString() != text) binding.urlBar.setText(text)
     }
 
     private fun syncUrlBar(url: String?) {
         val safe = url.orEmpty()
-        if (tabs.isNotEmpty() && safe.isNotEmpty()) tabs[activeIndex].url = safe
-        if (!binding.urlBar.hasFocus()) setUrlBarText(currentTabDisplay())
+        if (safe.isNotEmpty()) currentUrl = safe
+        if (!binding.urlBar.hasFocus()) setUrlBarText(currentDisplay())
     }
 
-    private fun currentTabDisplay(): String =
-        tabLabel(tabs.getOrNull(activeIndex))
-
-    private fun tabLabel(tab: Tab?): String {
-        if (tab == null) return getString(R.string.loading)
-        val title = tab.title?.takeIf { it.isNotBlank() && it != BLANK_URL }
-        if (title != null) return title
-        if (tab.url.isEmpty() || tab.url == BLANK_URL) return getString(R.string.new_tab)
+    private fun currentDisplay(): String {
+        currentTitle?.takeIf { it.isNotBlank() && it != BLANK_URL }?.let { return it }
+        if (currentUrl.isEmpty() || currentUrl == BLANK_URL) return getString(R.string.new_tab)
         return getString(R.string.loading)
     }
 
@@ -385,155 +429,45 @@ class MainActivity : AppCompatActivity() {
     private fun setupDragHandler() {
         var startHeight = 0
         val onStart: () -> Unit = {
-            startHeight = binding.tabsDrawer.layoutParams.height
-            drawerAnimator?.cancel()
+            startHeight = binding.sourceView.layoutParams.height
+            panelAnimator?.cancel()
         }
-        // Y axis grows downward → up-drag has negative dy → drawer grows.
+        // Y axis grows downward → up-drag has negative dy → panel grows.
         val onMove: (Float) -> Unit = { dy ->
-            setDrawerHeight((startHeight - dy.toInt()).coerceAtLeast(0))
+            setPanelHeight((startHeight - dy.toInt()).coerceAtLeast(0))
         }
         val onEnd: (Float) -> Unit = { /* stay where released */ }
-        listOf(binding.chromeContainer, binding.tabsDrawer).forEach { container ->
-            container.onDragStart = onStart
-            container.onDragMove = onMove
-            container.onDragEnd = onEnd
+        binding.chromeContainer.onDragStart = onStart
+        binding.chromeContainer.onDragMove = onMove
+        binding.chromeContainer.onDragEnd = onEnd
+    }
+
+    private fun setPanelHeight(h: Int) {
+        val v = binding.sourceView
+        val params = v.layoutParams
+        if (params.height == h) return
+        val wasClosed = params.height == 0
+        params.height = h
+        v.layoutParams = params
+        if (wasClosed && h > 0) maybeRefreshSource()
+    }
+
+    private fun maybeRefreshSource() {
+        if (sourceDirty && binding.sourceView.layoutParams.height > 0) {
+            sourceDirty = false
+            updateSourceView()
         }
     }
 
-    private var drawerAnimator: Animator? = null
-
-    private fun setDrawerHeight(h: Int) {
-        val drawer = binding.tabsDrawer
-        val params = drawer.layoutParams
-        if (params.height == h) return
-        params.height = h
-        drawer.layoutParams = params
-    }
-
-    private fun animateDrawerTo(target: Int) {
-        drawerAnimator?.cancel()
-        val current = binding.tabsDrawer.layoutParams.height
+    private fun animatePanelTo(target: Int) {
+        panelAnimator?.cancel()
+        val current = binding.sourceView.layoutParams.height
         if (current == target) return
-        drawerAnimator = ValueAnimator.ofInt(current, target).apply {
+        panelAnimator = ValueAnimator.ofInt(current, target).apply {
             duration = 200L
             interpolator = DecelerateInterpolator()
-            addUpdateListener { setDrawerHeight(it.animatedValue as Int) }
+            addUpdateListener { setPanelHeight(it.animatedValue as Int) }
             start()
         }
     }
-
-    private fun rebuildDrawer() {
-        val drawer = binding.tabsDrawer
-        drawer.removeAllViews()
-        val padH = dpToPx(DRAWER_HORIZONTAL_INSET_DP)
-        val padV = dpToPx(DRAWER_PADDING_DP)
-        drawer.setPadding(padH, padV, padH, padV)
-        tabs.forEachIndexed { index, tab ->
-            if (index == activeIndex) return@forEachIndexed
-            val row = makeTabRow(tabLabel(tab)) { switchToTab(index) }
-            attachSwipeToDelete(row) { closeTab(tab) }
-            drawer.addView(row)
-        }
-        drawer.addView(makeTabRow("+") { openBlankTab() })
-    }
-
-    private fun makeTabRow(label: CharSequence, onClick: () -> Unit): TextView {
-        val tv = TextView(this).apply {
-            text = label
-            background = AppCompatResources.getDrawable(context, R.drawable.tab_bubble_bg)
-            gravity = Gravity.CENTER
-            isSingleLine = true
-            ellipsize = android.text.TextUtils.TruncateAt.END
-            textSize = 15f
-            setPadding(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(8))
-            setOnClickListener { onClick() }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dpToPx(TAB_ROW_MARGIN_DP)
-                bottomMargin = dpToPx(TAB_ROW_MARGIN_DP)
-            }
-        }
-        return tv
-    }
-
-    private fun openBlankTab() {
-        tabs += Tab(BLANK_URL)
-        switchToTab(tabs.size - 1)
-        focusUrlBar()
-    }
-
-    private fun closeTab(tab: Tab) {
-        val index = tabs.indexOfFirst { it === tab }
-        if (index < 0 || index == activeIndex) return
-        tabs.removeAt(index)
-        if (index < activeIndex) activeIndex--
-        rebuildDrawer()
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun attachSwipeToDelete(view: View, onDelete: () -> Unit) {
-        var downX = 0f
-        var swiping = false
-        view.setOnTouchListener { v, ev ->
-            when (ev.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    downX = ev.rawX
-                    swiping = false
-                    false
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = ev.rawX - downX
-                    if (!swiping && abs(dx) > touchSlop) {
-                        swiping = true
-                        v.parent.requestDisallowInterceptTouchEvent(true)
-                    }
-                    if (swiping) {
-                        v.translationX = dx
-                        v.alpha = swipeAlpha(dx, v.width)
-                        true
-                    } else false
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (!swiping) return@setOnTouchListener false
-                    val dx = v.translationX
-                    if (abs(dx) > v.width / 2f) {
-                        val target = if (dx > 0) v.width * 2f else -v.width * 2f
-                        v.animate().translationX(target).alpha(0f).setDuration(SWIPE_ANIM_MS)
-                            .withEndAction { onDelete() }.start()
-                    } else {
-                        v.animate().translationX(0f).alpha(1f).setDuration(SWIPE_ANIM_MS).start()
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-    }
-
-    private fun swipeAlpha(dx: Float, width: Int): Float {
-        if (width <= 0) return 1f
-        return 1f - (abs(dx) / width).coerceIn(0f, MAX_SWIPE_FADE)
-    }
-
-    private fun focusUrlBar() {
-        binding.urlBar.requestFocus()
-        binding.urlBar.post { showKeyboard(binding.urlBar) }
-    }
-
-    private fun switchToTab(index: Int) {
-        if (index == activeIndex || index !in tabs.indices) return
-        tabs[activeIndex].state = Bundle().also { binding.webView.saveState(it) }
-        activeIndex = index
-        // Detection / progress reset come for free via the onPageStarted that follows.
-        val incoming = tabs[index]
-        incoming.state?.let { binding.webView.restoreState(it) }
-            ?: binding.webView.loadUrl(incoming.url)
-        if (!binding.urlBar.hasFocus()) setUrlBarText(currentTabDisplay())
-        rebuildDrawer()
-        animateDrawerTo(0)
-    }
-
-    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 }
