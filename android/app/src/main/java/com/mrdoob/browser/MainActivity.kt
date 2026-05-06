@@ -5,6 +5,7 @@ import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.LayerDrawable
@@ -41,6 +42,7 @@ import org.json.JSONObject
 private const val TAG = "MainActivity"
 private const val BLANK_URL = "about:blank"
 private const val PROGRESS_ALPHA = 80 // ~31% of 255
+private val SHARE_URL_REGEX = Regex("""https?://\S+""")
 
 class MainActivity : AppCompatActivity() {
 
@@ -99,8 +101,35 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState != null) {
             binding.webView.restoreState(savedInstanceState)
         } else {
-            binding.webView.loadUrl(BLANK_URL)
-            focusUrlBar()
+            val incoming = extractUrlFromIntent(intent)
+            if (incoming != null) {
+                loadUrl(incoming)
+            } else {
+                binding.webView.loadUrl(BLANK_URL)
+                focusUrlBar()
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        extractUrlFromIntent(intent)?.let { loadUrl(it) }
+    }
+
+    private fun extractUrlFromIntent(intent: Intent?): String? {
+        intent ?: return null
+        return when (intent.action) {
+            Intent.ACTION_VIEW -> intent.dataString
+            Intent.ACTION_SEND -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
+                if (text.isEmpty()) null
+                // If the share is a "Check this out: https://..." style blob,
+                // pull the first URL out — otherwise feed the raw text to loadUrl
+                // (which routes plain text to search).
+                else SHARE_URL_REGEX.find(text)?.value ?: text
+            }
+            else -> null
         }
     }
 
