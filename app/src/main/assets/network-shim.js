@@ -1,9 +1,9 @@
 // Patches window.fetch and XMLHttpRequest to forward each request/response
 // to the AndroidNetwork bridge. Image/model responses are stashed as Blobs
-// in window.__threeBrowser.blobs and only encoded to data: URLs lazily when
-// the panel asks via window.__threeBrowser.findBlob(requestId).
+// in window.__netex.blobs and only encoded to data: URLs lazily when
+// the panel asks via window.__netex.findBlob(requestId).
 (function () {
-  var ns = window.__threeBrowser || (window.__threeBrowser = {});
+  var ns = window.__netex || (window.__netex = {});
   if (ns.installed) return;
   ns.installed = true;
 
@@ -68,12 +68,12 @@
     reader.readAsDataURL(blob);
   };
 
-  // Native calls this on a panel expand. Each frame has its own __threeBrowser
+  // Native calls this on a panel expand. Each frame has its own __netex
   // namespace; recurse through same-origin frames to find the one with the blob.
   ns.findBlob = function (rid) {
     function visit(win) {
       try {
-        var nsi = win.__threeBrowser;
+        var nsi = win.__netex;
         if (nsi && nsi.blobs && nsi.blobs.has(rid)) {
           nsi.readBlob(rid);
           return true;

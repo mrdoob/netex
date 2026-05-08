@@ -508,7 +508,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun fetchBlobFromMain(rid: String) {
         binding.webView.evaluateJavascript(
-            "window.__threeBrowser && window.__threeBrowser.findBlob(${JSONObject.quote(rid)})",
+            "window.__netex && window.__netex.findBlob(${JSONObject.quote(rid)})",
             null
         )
     }
