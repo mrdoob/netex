@@ -186,7 +186,7 @@ class MainActivity : AppCompatActivity() {
         settings.displayZoomControls = false
         settings.userAgentString = settings.userAgentString
             .replace("; wv", "")
-            .replace(" wv", "") + " ThreeBrowser/0.1"
+            .replace(" wv", "") + " Netex/0.1"
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = false

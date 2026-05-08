@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Browser</string>
+    <string name="app_name">Netex</string>
     <string name="url_hint">Search or type URL</string>
     <string name="loading">Loading</string>
     <string name="new_tab">New tab</string>

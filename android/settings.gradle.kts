@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ThreeBrowser"
+rootProject.name = "Netex"
 include(":app")
