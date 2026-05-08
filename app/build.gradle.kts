@@ -44,16 +44,3 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("com.google.android.material:material:1.12.0")
 }
-
-// Copy bridge.js and constants.js from the canonical /devtools folder
-// into assets/ before each build, so the user keeps editing the originals.
-val copyThreeDevtoolsAssets by tasks.registering(Copy::class) {
-    from(rootProject.file("../devtools")) {
-        include("constants.js", "bridge.js")
-    }
-    into(layout.projectDirectory.dir("src/main/assets/threejs-devtools"))
-}
-
-tasks.named("preBuild") {
-    dependsOn(copyThreeDevtoolsAssets)
-}
