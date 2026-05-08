@@ -42,6 +42,7 @@ import org.json.JSONObject
 private const val TAG = "MainActivity"
 private const val BLANK_URL = "about:blank"
 private const val PROGRESS_ALPHA = 80 // ~31% of 255
+private const val PREF_LAST_URL = "last_url"
 private val SHARE_URL_REGEX = Regex("""https?://\S+""")
 
 class MainActivity : AppCompatActivity() {
@@ -101,7 +102,7 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState != null) {
             binding.webView.restoreState(savedInstanceState)
         } else {
-            val incoming = extractUrlFromIntent(intent)
+            val incoming = extractUrlFromIntent(intent) ?: lastSessionUrl()
             if (incoming != null) {
                 loadUrl(incoming)
             } else {
@@ -110,6 +111,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    override fun onPause() {
+        super.onPause()
+        val url = currentUrl.takeIf { it.isNotEmpty() && it != BLANK_URL }
+        getPreferences(MODE_PRIVATE).edit().putString(PREF_LAST_URL, url).apply()
+    }
+
+    private fun lastSessionUrl(): String? = getPreferences(MODE_PRIVATE)
+        .getString(PREF_LAST_URL, null)
+        ?.takeIf { it.isNotEmpty() && it != BLANK_URL }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
