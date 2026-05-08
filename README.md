@@ -19,22 +19,3 @@ extension) drop in instead.
 
 You'll need the Android SDK with platform 35 installed and a
 `local.properties` pointing to it (`sdk.dir=/path/to/Android/sdk`).
-
-## Debug from desktop Chrome
-
-With the device on USB and the app open:
-
-1. Desktop Chrome → `chrome://inspect/#devices` → **Inspect** under the WebView.
-2. Logcat: `adb logcat -s WebViewConsole:D`.
-
-## Three.js detector internals
-
-`bridge.js` and `constants.js` (vendored from the
-[three.js DevTools](https://github.com/mrdoob/threejs-devtools) Chrome
-extension, in `app/src/main/assets/threejs-devtools/`) are injected at
-`document_start` via `WebViewCompat.addDocumentStartJavaScript`. When
-three.js boots it sees `window.__THREE_DEVTOOLS__` and dispatches a
-`register` event with its revision. A small relay
-(`assets/threejs-devtools/android-relay.js`) replaces the Chrome
-extension's `content-script.js` and forwards the event to native code via
-`WebViewCompat.addWebMessageListener`.
