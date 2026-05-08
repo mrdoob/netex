@@ -71,6 +71,7 @@ class PanelRenderer(
             put("body", record.body)
             put("contentType", record.contentType ?: "")
             put("durationMs", record.durationMs)
+            put("size", record.sizeBytes)
             put("requestId", record.requestId ?: "")
         }.toString()
         afterShellLoaded {

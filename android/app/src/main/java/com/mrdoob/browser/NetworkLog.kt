@@ -13,6 +13,7 @@ object NetworkLog {
         val body: String,
         val contentType: String?,
         val durationMs: Long,
+        val sizeBytes: Long = 0,
         val requestId: String? = null
     )
 

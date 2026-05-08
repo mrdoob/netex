@@ -22,7 +22,11 @@ code.hljs { background:transparent !important; padding:0 !important; }
 .req { border-bottom:1px solid rgba(127,127,127,0.2); }
 .req > summary { padding:8px 12px; cursor:pointer; list-style:none; display:flex; gap:8px; align-items:center; background:var(--panel-bg); }
 .req > summary::-webkit-details-marker { display:none; }
-.req[open] > summary { position:sticky; top:0; z-index:1; }
+.net-totals { display:none; position:sticky; top:0; z-index:2; padding:8px 12px; gap:8px; align-items:center; background:var(--panel-bg); border-bottom:1px solid rgba(127,127,127,0.2); }
+.net-totals.show { display:flex; }
+.net-totals .method, .net-totals .status { visibility:hidden; }
+.net-totals .size { opacity:1; }
+.req[open] > summary { position:sticky; top:32px; z-index:1; }
 
 .method { font-weight:bold; padding:2px 6px; border-radius:4px; min-width:42px; text-align:center; flex-shrink:0; }
 .method.GET { background:rgba(60,130,80,0.25); }
@@ -32,6 +36,7 @@ code.hljs { background:transparent !important; padding:0 !important; }
 
 .url { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
+.size { opacity:0.6; flex-shrink:0; font-variant-numeric:tabular-nums; }
 .status { font-weight:bold; flex-shrink:0; min-width:36px; text-align:right; }
 .status.s2xx { color:#4ade80; }
 .status.s3xx { color:#fbbf24; }
@@ -46,7 +51,7 @@ code.hljs { background:transparent !important; padding:0 !important; }
 </head>
 <body>
 <div id="source-tab" class="active"><pre><code class="language-html"></code></pre></div>
-<div id="network-tab"><p class="empty">No requests captured yet.</p></div>
+<div id="network-tab"><div class="net-totals" id="netTotals"><span class="method"></span><span class="url" id="netTotalsCount"></span><span class="size" id="netTotalsSize"></span><span class="status"></span></div><p class="empty">No requests captured yet.</p></div>
 <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-css.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-html.min.js"></script>

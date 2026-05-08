@@ -23,6 +23,10 @@
     return /^(image|model)\//i.test(contentType);
   }
 
+  function parseLen(headerValue) {
+    return parseInt(headerValue || '0', 10) || 0;
+  }
+
   function post(record) {
     try {
       if (typeof AndroidNetwork !== 'undefined' && AndroidNetwork.postMessage) {
@@ -92,7 +96,8 @@
       var promise = origFetch.apply(this, arguments);
       promise.then(function (response) {
         var ct = response.headers.get('content-type') || '';
-        var emit = function (body, requestId) {
+        var lenHeader = parseLen(response.headers.get('content-length'));
+        var emit = function (body, requestId, size) {
           post({
             method: method.toUpperCase(),
             url: url,
@@ -100,16 +105,17 @@
             body: body,
             contentType: ct,
             duration: Date.now() - start,
+            size: size || 0,
             requestId: requestId || ''
           });
         };
         if (isBinaryDisplayable(ct)) {
           response.clone().blob()
-            .then(function (blob) { emit('', captureBlob(blob)); })
-            .catch(function () { emit('', ''); });
+            .then(function (blob) { emit('', captureBlob(blob), lenHeader || blob.size); })
+            .catch(function () { emit('', '', lenHeader); });
         } else {
           response.clone().text()
-            .then(function (b) { emit(clip(b), ''); })
+            .then(function (b) { emit(clip(b), '', lenHeader || b.length); })
             .catch(function () {});
         }
       }).catch(function (err) {
@@ -170,6 +176,7 @@
           body: body,
           contentType: ct,
           duration: Math.round(entry.duration || 0),
+          size: entry.decodedBodySize || entry.encodedBodySize || 0,
           requestId: ''
         });
       });
@@ -194,6 +201,7 @@
       var start = Date.now();
       xhr.addEventListener('loadend', function () {
         var ct = xhr.getResponseHeader('content-type') || '';
+        var lenHeader = parseLen(xhr.getResponseHeader('content-length'));
         var body = '';
         if (!isBinaryDisplayable(ct)) {
           try { body = xhr.responseText || ''; } catch (e) {}
@@ -205,6 +213,7 @@
           body: clip(body),
           contentType: ct,
           duration: Date.now() - start,
+          size: lenHeader || body.length || 0,
           requestId: ''
         });
       });

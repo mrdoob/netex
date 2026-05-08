@@ -28,6 +28,7 @@ class NetworkBridge(
                 body = obj.optString("body"),
                 contentType = obj.optString("contentType").takeIf { it.isNotEmpty() },
                 durationMs = obj.optLong("duration"),
+                sizeBytes = obj.optLong("size"),
                 requestId = obj.optString("requestId").takeIf { it.isNotEmpty() }
             )
         )

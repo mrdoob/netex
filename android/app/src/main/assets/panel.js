@@ -36,8 +36,31 @@
     try { hljs.highlightElement(newCode); } catch (e) {}
   }
 
+  var totalBytes = 0;
+  var totalCount = 0;
+
+  function updateTotals() {
+    var el = document.getElementById('netTotals');
+    if (!el) return;
+    if (totalCount === 0) { el.classList.remove('show'); return; }
+    el.classList.add('show');
+    document.getElementById('netTotalsCount').textContent =
+      totalCount + ' request' + (totalCount === 1 ? '' : 's');
+    document.getElementById('netTotalsSize').textContent = formatSize(totalBytes);
+  }
+
   function clearNetwork() {
-    document.getElementById('network-tab').innerHTML = '<p class="empty">No requests captured yet.</p>';
+    var tab = document.getElementById('network-tab');
+    Array.from(tab.children).forEach(function (child) {
+      if (child.id !== 'netTotals') child.remove();
+    });
+    var p = document.createElement('p');
+    p.className = 'empty';
+    p.textContent = 'No requests captured yet.';
+    tab.appendChild(p);
+    totalBytes = 0;
+    totalCount = 0;
+    updateTotals();
   }
 
   function appendNetworkRow(payload) {
@@ -45,6 +68,9 @@
     var container = document.getElementById('network-tab');
     var empty = container.querySelector('.empty');
     if (empty) empty.remove();
+    totalCount++;
+    totalBytes += r.size || 0;
+    updateTotals();
 
     var det = document.createElement('details');
     det.className = 'req';
@@ -60,6 +86,7 @@
     var summary = document.createElement('summary');
     summary.appendChild(span('method ' + r.method, r.method));
     summary.appendChild(span('url', r.displayUrl || r.url));
+    if (r.size) summary.appendChild(span('size', formatSize(r.size)));
     summary.appendChild(span('status ' + statusClass, statusText));
     det.appendChild(summary);
 
@@ -137,6 +164,12 @@
   function isModel(r) {
     if (/^model\/gltf/i.test(r.contentType || '')) return true;
     return /\.(glb|gltf)(\?|#|$)/i.test(r.url);
+  }
+
+  function formatSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   function span(cls, text) {
