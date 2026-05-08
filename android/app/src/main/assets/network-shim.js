@@ -128,6 +128,58 @@
     };
   }
 
+  // PerformanceObserver picks up resources the browser loads directly
+  // (<img>, <iframe>, the document itself) — fetch/XHR are already covered above.
+  function classify(entry) {
+    if (entry.entryType === 'navigation') return 'text/html';
+    if (entry.entryType !== 'resource') return null;
+    if (entry.initiatorType === 'iframe') return 'text/html';
+    if (entry.initiatorType === 'img') return 'image/*';
+    return null;
+  }
+
+  function isUninteresting(entry) {
+    var url = entry.name || '';
+    if (url.indexOf('data:') === 0) return true;
+    if (url.indexOf('about:') === 0) return true;
+    if (url.indexOf('javascript:') === 0) return true;
+    return false;
+  }
+
+  var seenEntries = new Set();
+  try {
+    var po = new PerformanceObserver(function (list) {
+      list.getEntries().forEach(function (entry) {
+        if (isUninteresting(entry)) return;
+        // Sub-frames' navigation is already logged by the parent as an iframe resource.
+        if (entry.entryType === 'navigation' && window !== window.top) return;
+        var ct = classify(entry);
+        if (!ct) return;
+        var key = entry.entryType + '|' + entry.startTime + '|' + entry.name;
+        if (seenEntries.has(key)) return;
+        seenEntries.add(key);
+        if (seenEntries.size > 512) seenEntries.clear();
+        var body = '';
+        if (entry.entryType === 'navigation' && window === window.top) {
+          try { body = clip(document.documentElement.outerHTML); } catch (e) {}
+        }
+        post({
+          method: 'GET',
+          url: entry.name,
+          status: entry.responseStatus || 0,
+          body: body,
+          contentType: ct,
+          duration: Math.round(entry.duration || 0),
+          requestId: ''
+        });
+      });
+    });
+    // Two observes (each with buffered:true) — entries finalized before the async callback
+    // runs would be lost otherwise. Dedupe handles any double-delivery.
+    po.observe({ type: 'resource', buffered: true });
+    po.observe({ type: 'navigation', buffered: true });
+  } catch (e) { /* PerformanceObserver unavailable */ }
+
   var XHR = window.XMLHttpRequest;
   if (XHR) {
     var origOpen = XHR.prototype.open;
