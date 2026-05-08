@@ -301,7 +301,8 @@ class MainActivity : AppCompatActivity() {
         binding.urlBar.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 binding.urlBar.setText(if (currentUrl == BLANK_URL) "" else currentUrl)
-                binding.urlBar.selectAll()
+                // Wait until ACTION_UP's cursor placement settles, otherwise it clears the selection.
+                binding.urlBar.post { binding.urlBar.selectAll() }
             } else {
                 setUrlBarText(currentDisplay())
             }
