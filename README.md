@@ -11,7 +11,13 @@ the URL bar. The detector is hardcoded for now; the planned direction is
 to support Chrome extensions and let `three.js DevTools` (or any other
 extension) drop in instead.
 
-## Build & install
+## Install
+
+Download [netex-0.1.0.apk](https://github.com/mrdoob/netex/releases/download/0.1.0/netex-0.1.0.apk)
+and sideload it. You may need to allow "install unknown apps" for the
+browser or file manager you opened the file from.
+
+## Build from source
 
 ```sh
 ./gradlew :app:installDebug
