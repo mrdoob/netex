@@ -1,14 +1,14 @@
-# Netex (Android)
+# Netex Browser
 
-A minimal Android browser with a built-in devtools panel — drag up the
-bottom bar to see the page's formatted source and a live network log
-(fetch + XHR + images + HTML, with inline image / glTF previews).
+A minimal Android browser with a built-in devtools panel. Drag up the
+bottom bar to see the page's source and a live network log (fetch, XHR,
+images, HTML, with inline image and glTF previews).
 
-A bundled three.js revision detector is *currently* shoehorned in — when
-a page uses three.js, its revision shows as a badge on the logo in the
-URL bar. This is a stopgap; the planned direction is to add Chrome
-extension support so three.js DevTools (and others) can drop in instead
-of being hardcoded.
+A three.js revision detector is currently bundled in — when a page uses
+three.js, the detected revision shows as a small badge on the logo in
+the URL bar. The detector is hardcoded for now; the planned direction is
+to support Chrome extensions and let Three.js DevTools (or any other
+extension) drop in instead.
 
 ## Layout
 

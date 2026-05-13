@@ -1,4 +1,4 @@
-# Netex
+# Netex Browser
 
 A minimal Android browser with a built-in devtools panel. Drag up the
 bottom bar to see the page's source and a live network log (fetch, XHR,
