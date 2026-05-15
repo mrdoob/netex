@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Bitmap
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.LayerDrawable
@@ -35,7 +36,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
-import com.google.android.material.color.MaterialColors
 import com.mrdoob.browser.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -51,7 +51,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var panel: PanelRenderer
 
-    private val threeBridge = ThreeDevtoolsBridge()
+    private val extensionRouter = ExtensionRouter()
+    private val extensionBridge = ExtensionBridge(extensionRouter)
+    private val panelExtensionBridge = PanelExtensionBridge(extensionRouter)
     private val networkBridge = NetworkBridge { rid, dataUrl -> panel.deliverBlob(rid, dataUrl) }
     private val panelBridge = PanelBridge { rid -> fetchBlobFromMain(rid) }
 
@@ -89,9 +91,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         documentStartScript = DocumentStartScripts.load(this)
+        extensionRouter.bindPageView(binding.webView)
+        extensionRouter.bindPanelView(binding.threePanelView)
         installBridges()
         configureWebView()
         panel = PanelRenderer(this, binding.panelView, binding.webView).also { it.init() }
+        setupThreeJsPanel(this, binding.threePanelView, panelExtensionBridge)
         observeDetectionState()
         observeNetworkLog()
         wireUrlBar()
@@ -154,13 +159,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            WebViewCompat.addWebMessageListener(webView, ThreeDevtoolsBridge.JS_OBJECT_NAME, setOf("*"), threeBridge)
+            WebViewCompat.addWebMessageListener(webView, ExtensionBridge.JS_OBJECT_NAME, setOf("*"), extensionBridge)
             WebViewCompat.addWebMessageListener(webView, NetworkBridge.JS_OBJECT_NAME, setOf("*"), networkBridge)
             WebViewCompat.addWebMessageListener(binding.panelView, PanelBridge.JS_OBJECT_NAME, setOf("*"), panelBridge)
         } else {
             @SuppressLint("AddJavascriptInterface")
             run {
-                webView.addJavascriptInterface(threeBridge.Fallback(), ThreeDevtoolsBridge.JS_OBJECT_NAME)
+                webView.addJavascriptInterface(extensionBridge.Fallback(), ExtensionBridge.JS_OBJECT_NAME)
                 webView.addJavascriptInterface(networkBridge.Fallback(), NetworkBridge.JS_OBJECT_NAME)
                 binding.panelView.addJavascriptInterface(panelBridge.Fallback(), PanelBridge.JS_OBJECT_NAME)
             }
@@ -181,7 +186,7 @@ class MainActivity : AppCompatActivity() {
 
         val webView = binding.webView
         webView.setBackgroundColor(
-            MaterialColors.getColor(webView, com.google.android.material.R.attr.colorSurfaceContainerLowest)
+            webView.materialColor(com.google.android.material.R.attr.colorSurfaceContainerLowest)
         )
         val settings = webView.settings
         settings.javaScriptEnabled = true
@@ -210,6 +215,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 DetectionStore.reset()
                 NetworkLog.reset()
+                extensionRouter.onPageNavigationStarted()
                 setUrlBubbleProgress(0, animate = false)
                 if (!docStartInjectionAvailable) {
                     // Racy fallback: best-effort injection before page scripts run.
@@ -258,6 +264,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeDetectionState() {
+        var appliedTint: Int? = null
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 DetectionStore.flow.collect { state ->
@@ -268,8 +275,14 @@ class MainActivity : AppCompatActivity() {
                         }
                         is DetectionState.Detected -> {
                             binding.threeLogo.alpha = 1.0f
-                            binding.revisionBadge.text = state.revision.filter { it.isDigit() }
+                            binding.revisionBadge.text = state.badgeText
                             binding.revisionBadge.visibility = View.VISIBLE
+                            val tint = state.backgroundColor?.let(::parseHexColor)
+                                ?: binding.revisionBadge.materialColor(com.google.android.material.R.attr.colorPrimary)
+                            if (tint != appliedTint) {
+                                binding.revisionBadge.background?.mutate()?.setTint(tint)
+                                appliedTint = tint
+                            }
                         }
                     }
                 }
@@ -325,6 +338,7 @@ class MainActivity : AppCompatActivity() {
     private fun wirePanelHeader() {
         binding.tabSource.setOnClickListener { switchTab(PanelRenderer.Tab.SOURCE) }
         binding.tabNetwork.setOnClickListener { switchTab(PanelRenderer.Tab.NETWORK) }
+        binding.tabThreejs.setOnClickListener { switchTab(PanelRenderer.Tab.THREEJS) }
         binding.panelReload.setOnClickListener { binding.webView.reload() }
     }
 
@@ -332,15 +346,19 @@ class MainActivity : AppCompatActivity() {
         if (tab == currentTab) return
         currentTab = tab
         updateTabStyles()
-        panel.setTab(tab)
+        val showThreeJs = tab == PanelRenderer.Tab.THREEJS
+        binding.panelView.visibility = if (showThreeJs) View.GONE else View.VISIBLE
+        binding.threePanelView.visibility = if (showThreeJs) View.VISIBLE else View.GONE
+        if (!showThreeJs) panel.setTab(tab)
         if (tab == PanelRenderer.Tab.SOURCE) maybeRefreshSource()
     }
 
     private fun updateTabStyles() {
-        val active = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurface)
-        val inactive = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurfaceVariant)
+        val active = binding.root.materialColor(com.google.android.material.R.attr.colorOnSurface)
+        val inactive = binding.root.materialColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
         binding.tabSource.setTextColor(if (currentTab == PanelRenderer.Tab.SOURCE) active else inactive)
         binding.tabNetwork.setTextColor(if (currentTab == PanelRenderer.Tab.NETWORK) active else inactive)
+        binding.tabThreejs.setTextColor(if (currentTab == PanelRenderer.Tab.THREEJS) active else inactive)
     }
 
     private fun hideKeyboard(view: View) {
@@ -512,4 +530,6 @@ class MainActivity : AppCompatActivity() {
             null
         )
     }
+
+    private fun parseHexColor(hex: String): Int? = try { Color.parseColor(hex) } catch (_: IllegalArgumentException) { null }
 }

@@ -7,8 +7,6 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.annotation.AttrRes
-import com.google.android.material.color.MaterialColors
 import org.json.JSONObject
 import org.json.JSONTokener
 
@@ -17,7 +15,7 @@ class PanelRenderer(
     private val panelView: WebView,
     private val mainView: WebView
 ) {
-    enum class Tab { SOURCE, NETWORK }
+    enum class Tab { SOURCE, NETWORK, THREEJS }
 
     private var shellLoaded = false
     private val pending = ArrayDeque<() -> Unit>()
@@ -26,9 +24,7 @@ class PanelRenderer(
     fun init() {
         panelView.settings.javaScriptEnabled = true
         panelView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        panelView.setBackgroundColor(
-            MaterialColors.getColor(panelView, com.google.android.material.R.attr.colorSurfaceContainer)
-        )
+        panelView.setBackgroundColor(panelView.materialColor(com.google.android.material.R.attr.colorSurfaceContainer))
         panelView.webChromeClient = WebChromeClient()
         panelView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String?) {
@@ -94,8 +90,8 @@ class PanelRenderer(
     private fun applyTheme() {
         val dark = isNightMode()
         val fg = if (dark) "#cccccc" else "#222222"
-        val panelBg = materialHex(com.google.android.material.R.attr.colorSurfaceContainer)
-        val viewerBg = materialHex(com.google.android.material.R.attr.colorSurfaceContainerHighest)
+        val panelBg = panelView.materialColorHex(com.google.android.material.R.attr.colorSurfaceContainer)
+        val viewerBg = panelView.materialColorHex(com.google.android.material.R.attr.colorSurfaceContainerHighest)
         evalPanel(
             "window.__panel.setTheme({ dark: $dark, fg: ${q(fg)}, panelBg: ${q(panelBg)}, viewerBg: ${q(viewerBg)} })"
         )
@@ -110,11 +106,6 @@ class PanelRenderer(
     }
 
     private fun q(s: String): String = JSONObject.quote(s)
-
-    private fun materialHex(@AttrRes attr: Int): String {
-        val rgb = MaterialColors.getColor(panelView, attr)
-        return String.format("#%06X", 0xFFFFFF and rgb)
-    }
 
     private fun isNightMode(): Boolean = (activity.resources.configuration.uiMode and
         Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES

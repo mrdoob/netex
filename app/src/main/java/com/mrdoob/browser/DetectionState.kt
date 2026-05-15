@@ -5,20 +5,22 @@ import kotlinx.coroutines.flow.asStateFlow
 
 sealed interface DetectionState {
     data object NotDetected : DetectionState
-    data class Detected(val revision: String) : DetectionState
+    data class Detected(val badgeText: String, val backgroundColor: String?) : DetectionState
 }
 
 object DetectionStore {
     private val _flow = MutableStateFlow<DetectionState>(DetectionState.NotDetected)
     val flow = _flow.asStateFlow()
 
-    fun setRevision(revision: String) {
-        val current = _flow.value
-        if (current is DetectionState.Detected && current.revision == revision) return
-        _flow.value = DetectionState.Detected(revision)
+    fun setBadgeText(text: String) {
+        _flow.value = if (text.isEmpty()) DetectionState.NotDetected
+        else DetectionState.Detected(text, (_flow.value as? DetectionState.Detected)?.backgroundColor)
     }
 
-    fun reset() {
-        _flow.value = DetectionState.NotDetected
+    fun setBadgeBackgroundColor(color: String?) {
+        val current = _flow.value as? DetectionState.Detected ?: return
+        _flow.value = current.copy(backgroundColor = color)
     }
+
+    fun reset() { _flow.value = DetectionState.NotDetected }
 }
