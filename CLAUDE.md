@@ -4,21 +4,26 @@ A minimal Android browser with a built-in devtools panel. Drag up the
 bottom bar to see the page's source and a live network log (fetch, XHR,
 images, HTML, with inline image and glTF previews).
 
-A three.js revision detector is currently bundled in — when a page uses
-three.js, the detected revision shows as a small badge on the logo in
-the URL bar. The detector is hardcoded for now; the planned direction is
-to support Chrome extensions and let Three.js DevTools (or any other
-extension) drop in instead.
+The vendored [Three.js DevTools](https://github.com/mrdoob/three.js/tree/dev/devtools)
+Chrome extension runs in-process via a minimum `chrome.*` shim — its
+background script drives the revision badge on the logo, and its panel
+UI is mounted as a third tab (Source / Network / Three.js) in the
+bottom panel.
 
 ## Layout
 
 ```
 app/src/main/
   java/com/mrdoob/browser/       # Kotlin sources
-  assets/                        # JS injected into the page WebView
-    threejs-devtools/            # bridge.js + constants.js (vendored from
-                                 # the three.js DevTools Chrome extension)
-                                 # + android-relay.js (Android-specific)
+  assets/
+    chrome-shim-page.js          # chrome.* shim for the page WebView
+    chrome-shim-panel.js         # chrome.* shim for the Three.js panel WebView
+    network-shim.js              # fetch/XHR/Image instrumentation
+    panel-shell.html / panel.js  # Source + Network tabs (custom)
+    threejs-devtools/            # Vendored Three.js DevTools extension
+      manifest.json, background.js, content-script.js, devtools.js,
+      bridge.js, highlight.js, constants.js, index.html,
+      panel/{panel.html, panel.css, panel.js}
   res/raw/tlds.txt               # IANA TLD list (URL vs search heuristic)
 ```
 
@@ -50,35 +55,52 @@ Verify a device is attached with `adb devices` before installing.
 
 **Page-world JS** is concatenated by `DocumentStartScripts.kt` and injected via
 `WebViewCompat.addDocumentStartJavaScript` so it runs before any page
-scripts. The bundle is `constants.js` + `bridge.js` + `android-relay.js` +
+scripts. The bundle is `constants.js` + `chrome-shim-page.js` +
+`bridge.js` + `highlight.js` + `content-script.js` (wrapped in an IIFE
+with a scoped `chrome`) + `background.js` (wrapped in an IIFE) +
 `network-shim.js`.
 
-**Three.js detection** is a *cooperative protocol*, not a sniffer:
-`bridge.js` exposes `window.__THREE_DEVTOOLS__` (an EventTarget) and three.js
-itself dispatches `register`/`observe` events to it. The Android-specific
-piece is just `android-relay.js` (replaces the Chrome extension's
-`content-script.js`) — it forwards `window.postMessage` to a native
-`WebMessageListener`. This whole path is a stopgap until extension
-support lands; it should not grow new features.
+**Three.js detection** runs the upstream extension's own pipeline:
+`bridge.js` exposes `window.__THREE_DEVTOOLS__` and three.js dispatches
+`register`/`observe` events. `content-script.js` forwards via
+`chrome.runtime.sendMessage`; `background.js` calls
+`chrome.action.setBadgeText` — both are real Chrome APIs faked by
+`chrome-shim-page.js`. content-script gets its own scoped `chrome` (separate
+`runtime.onMessage` pool) so its listeners don't observe its own
+sendMessage calls — that self-loop is normally prevented by isolated worlds.
 
 **Native bridges** all extend `JsonMessageBridge` and have a nested
 `Fallback` `@JavascriptInterface` for WebViews too old for
-`WEB_MESSAGE_LISTENER`:
+`WEB_MESSAGE_LISTENER`. Envelope `type` strings are centralized in
+`EnvelopeType.kt`:
 
-- `ThreeDevtoolsBridge` — receives `register` → `DetectionStore.setRevision`
-  → updates the badge on the three.js logo in the URL bar.
+- `ExtensionBridge` (page WebView, `AndroidExtension`) — handles
+  `action.setBadgeText` / `setBadgeBackgroundColor` (→ `DetectionStore`),
+  plus `page-ready` and page-side port traffic forwarded to the router.
+- `PanelExtensionBridge` (Three.js panel WebView, `AndroidExtensionPanel`)
+  — forwards panel `port-connect`/`port-message`/`port-disconnect` to the
+  router.
 - `NetworkBridge` — receives fetch/XHR records from `network-shim.js`,
   appends to `NetworkLog` (a `MutableSharedFlow`).
 - `PanelBridge` — runs in the *panel* WebView; handles `fetch-blob` →
   asks `MainActivity` to invoke `__netex.findBlob(rid)` in the page
   WebView, which posts the data URL back through `NetworkBridge`.
 
-**The devtools panel** (`PanelRenderer.kt`) is a separate WebView at the
+**`ExtensionRouter`** is the activity-scoped persistent piece — in Chrome
+the MV3 service worker stays alive across navigations, but here
+`background.js` dies with the page. The router caches each live panel
+port's `MESSAGE_INIT` and replays connect+init against every fresh
+`background.js` (top frame + each same-origin iframe via the page shim's
+`dispatchAllFrames`).
+
+**The devtools panel** (`PanelRenderer.kt`) is a WebView at the
 bottom, dragged up by the chrome bar. It's loaded with
 `loadDataWithBaseURL("https://cdn.jsdelivr.net/", ...)` so highlight.js,
 js-beautify, and `<model-viewer>` can be loaded from jsDelivr. Tabs:
-**Source** (formatted page HTML) and **Network** (live request log with
-inline image / glTF previews).
+**Source** (formatted page HTML), **Network** (live request log with
+inline image / glTF previews), and **Three.js** (a second WebView hosting
+the extension's vendored `panel/panel.html`, configured by
+`setupThreeJsPanel`).
 
 **Blob handling is lazy**: `network-shim.js` keeps captured Blobs in
 `window.__netex.blobs` (FIFO cap 64). Encoding to a data URL
@@ -104,10 +126,10 @@ changes (it restores full back/forward history via `WebView.saveState`).
 ## Conventions
 
 - The user (mrdoob) prefers terse responses and small, focused diffs.
-- `bridge.js` and `constants.js` under `app/src/main/assets/threejs-devtools/`
-  are vendored from the three.js DevTools Chrome extension — leave them
-  byte-identical so they stay easy to refresh from upstream. Custom logic
-  belongs in `android-relay.js` or `network-shim.js` next to them.
+- Every file under `app/src/main/assets/threejs-devtools/` is vendored
+  from the Three.js DevTools Chrome extension — leave them byte-identical
+  so they stay easy to refresh from upstream. Custom logic belongs in the
+  `chrome-shim-*.js` files or `network-shim.js`.
 - Don't commit unless explicitly asked.
 - Periodic `/simplify` rounds are run after feature work — keep the diff
   small enough to review in one pass.

@@ -4,11 +4,11 @@ A minimal Android browser with a built-in devtools panel. Drag up the
 bottom bar to see the page's source and a live network log (fetch, XHR,
 images, HTML, with inline image and glTF previews).
 
-A three.js revision detector is currently bundled in — when a page uses
-three.js, the detected revision shows as a small badge on the logo in
-the URL bar. The detector is hardcoded for now; the planned direction is
-to support Chrome extensions and let Three.js DevTools (or any other
-extension) drop in instead.
+The vendored [Three.js DevTools](https://github.com/mrdoob/three.js/tree/dev/devtools)
+Chrome extension runs in-process via a minimum `chrome.*` shim — its
+background script drives the revision badge on the logo, and its panel
+UI is mounted as a third tab (Source / Network / Three.js) in the
+bottom panel.
 
 ## Install
 
