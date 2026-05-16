@@ -7,7 +7,9 @@ final class NetexIOSUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.staticTexts["Netex"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.textFields["netex.address"].exists)
+        XCTAssertFalse(app.textFields["netex.address"].exists)
+        XCTAssertTrue(app.staticTexts["netex.pageTitle"].exists)
+        XCTAssertTrue(app.buttons["netex.examples"].exists)
 
         let tabs = app.segmentedControls["netex.tabs"]
         XCTAssertTrue(tabs.exists)

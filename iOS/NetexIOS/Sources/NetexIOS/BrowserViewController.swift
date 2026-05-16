@@ -10,9 +10,10 @@ final class BrowserViewController: UIViewController {
     }
 
     private let navigationPolicy = NetexNavigationPolicy()
-    private let addressField = UITextField()
     private let homeButton = UIButton(type: .system)
+    private let pageTitleLabel = UILabel()
     private let reloadButton = UIButton(type: .system)
+    private let examplesButton = UIButton(type: .system)
     private let hideInspectorButton = UIButton(type: .system)
     private let showInspectorButton = UIButton(type: .system)
     private let tabs = UISegmentedControl(items: ["Console", "Source", "Network", "Three.js"])
@@ -31,6 +32,19 @@ final class BrowserViewController: UIViewController {
     private var titleObservation: NSKeyValueObservation?
     private var urlObservation: NSKeyValueObservation?
     private var currentPageURL = "about:blank"
+    private var customMainFrameHost: String?
+
+    private struct Example {
+        let title: String
+        let subtitle: String
+        let urlString: String
+    }
+
+    private let examples: [Example] = [
+        Example(title: "Examples", subtitle: "Gallery index", urlString: "https://threejs.org/examples/"),
+        Example(title: "Animated Model", subtitle: "Animation/keyframe detection", urlString: "https://threejs.org/examples/#webgl_animation_keyframes"),
+        Example(title: "glTF Loader", subtitle: "Model and network preview", urlString: "https://threejs.org/examples/#webgl_loader_gltf")
+    ]
 
     private lazy var consoleBatcher = MessageBatcher<ConsoleEntry>(maxBatchSize: 32, delay: 0.05) { [weak self] batch in
         self?.panelRenderer.appendConsole(batch)
@@ -124,27 +138,32 @@ final class BrowserViewController: UIViewController {
     }
 
     private func buildChrome() {
-        addressField.borderStyle = .roundedRect
-        addressField.autocapitalizationType = .none
-        addressField.autocorrectionType = .no
-        addressField.keyboardType = .URL
-        addressField.returnKeyType = .go
-        addressField.clearButtonMode = .whileEditing
-        addressField.delegate = self
-        addressField.placeholder = "Three.js example URL"
-        addressField.accessibilityIdentifier = "netex.address"
-
         homeButton.setImage(UIImage(systemName: "house"), for: .normal)
         homeButton.addTarget(self, action: #selector(homeTapped), for: .touchUpInside)
         homeButton.accessibilityLabel = "Home"
         homeButton.accessibilityIdentifier = "netex.home"
         homeButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
 
+        pageTitleLabel.text = "Netex"
+        pageTitleLabel.font = .preferredFont(forTextStyle: .headline)
+        pageTitleLabel.adjustsFontForContentSizeCategory = true
+        pageTitleLabel.lineBreakMode = .byTruncatingMiddle
+        pageTitleLabel.textAlignment = .center
+        pageTitleLabel.accessibilityIdentifier = "netex.pageTitle"
+        pageTitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
         reloadButton.setImage(UIImage(systemName: "arrow.clockwise"), for: .normal)
         reloadButton.addTarget(self, action: #selector(reloadTapped), for: .touchUpInside)
         reloadButton.accessibilityLabel = "Reload"
         reloadButton.accessibilityIdentifier = "netex.reload"
         reloadButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
+
+        examplesButton.setImage(UIImage(systemName: "ellipsis.circle"), for: .normal)
+        examplesButton.accessibilityLabel = "Examples"
+        examplesButton.accessibilityIdentifier = "netex.examples"
+        examplesButton.showsMenuAsPrimaryAction = true
+        examplesButton.menu = makeExamplesMenu()
+        examplesButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
 
         hideInspectorButton.setImage(UIImage(systemName: "chevron.down"), for: .normal)
         hideInspectorButton.addTarget(self, action: #selector(hideInspectorTapped), for: .touchUpInside)
@@ -176,7 +195,7 @@ final class BrowserViewController: UIViewController {
         blockedNavigationLabel.isHidden = true
         blockedNavigationLabel.accessibilityIdentifier = "netex.blockedNavigation"
 
-        let toolbar = UIStackView(arrangedSubviews: [homeButton, addressField, reloadButton])
+        let toolbar = UIStackView(arrangedSubviews: [homeButton, pageTitleLabel, reloadButton, examplesButton])
         toolbar.axis = .horizontal
         toolbar.spacing = 8
         toolbar.alignment = .center
@@ -240,7 +259,7 @@ final class BrowserViewController: UIViewController {
             self?.pageProgress.isHidden = progress >= 1.0
         }
         urlObservation = pageView.observe(\.url, options: [.new]) { [weak self] webView, _ in
-            self?.syncAddress(webView.url)
+            self?.syncPageTitle(url: webView.url)
         }
         titleObservation = pageView.observe(\.title, options: [.new]) { [weak self] _, _ in
             self?.panelRenderer.refreshSource()
@@ -264,6 +283,7 @@ final class BrowserViewController: UIViewController {
     }
 
     private func loadStartPage() {
+        customMainFrameHost = nil
         load(AssetLoader.assetURL("NetexAssets/start.html"), persist: false)
     }
 
@@ -272,17 +292,66 @@ final class BrowserViewController: UIViewController {
         currentPageURL = url.absoluteString
         panelRenderer.clearNetwork()
         pageView.load(URLRequest(url: url))
-        syncAddress(url)
+        syncPageTitle(url: url)
         if persist, url.scheme != NetexAssetSchemeHandler.scheme {
             UserDefaults.standard.set(url.absoluteString, forKey: "lastURL")
         }
     }
 
-    private func syncAddress(_ url: URL?) {
+    private func syncPageTitle(url: URL?) {
         currentPageURL = url?.absoluteString ?? currentPageURL
-        if !addressField.isFirstResponder {
-            addressField.text = url?.scheme == NetexAssetSchemeHandler.scheme ? "" : NetexURL.displayURL(url)
+        pageTitleLabel.text = displayTitle(for: url)
+        pageTitleLabel.accessibilityValue = url?.absoluteString
+    }
+
+    private func displayTitle(for url: URL?) -> String {
+        guard let url else { return "Netex" }
+        if url.scheme == NetexAssetSchemeHandler.scheme {
+            return "Netex"
         }
+        if let host = url.host, host.contains("threejs.org") {
+            if let fragment = url.fragment, !fragment.isEmpty {
+                return fragment
+            }
+            if url.path != "/" && !url.path.isEmpty {
+                return url.lastPathComponent.replacingOccurrences(of: ".html", with: "")
+            }
+            return "Three.js Examples"
+        }
+        return url.host ?? NetexURL.displayURL(url)
+    }
+
+    private func makeExamplesMenu() -> UIMenu {
+        let exampleActions = examples.compactMap { example -> UIAction? in
+            guard let url = URL(string: example.urlString) else { return nil }
+            return UIAction(title: example.title, subtitle: example.subtitle) { [weak self] _ in
+                self?.customMainFrameHost = nil
+                self?.load(url)
+            }
+        }
+        let custom = UIAction(title: "Open Custom URL...", image: UIImage(systemName: "link")) { [weak self] _ in
+            self?.presentCustomURLPrompt()
+        }
+        return UIMenu(title: "Open", children: exampleActions + [custom])
+    }
+
+    private func presentCustomURLPrompt() {
+        let alert = UIAlertController(title: "Open Custom URL", message: "Advanced: inspect a custom Three.js page.", preferredStyle: .alert)
+        alert.addTextField { textField in
+            textField.placeholder = "https://example.com"
+            textField.keyboardType = .URL
+            textField.autocapitalizationType = .none
+            textField.autocorrectionType = .no
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Open", style: .default) { [weak self, weak alert] _ in
+            guard let raw = alert?.textFields?.first?.text,
+                  let url = NetexURL.resolved(from: raw)
+            else { return }
+            self?.customMainFrameHost = url.host?.lowercased()
+            self?.load(url)
+        })
+        present(alert, animated: true)
     }
 
     @objc private func reloadTapped() {
@@ -486,15 +555,6 @@ final class BrowserViewController: UIViewController {
     }
 }
 
-extension BrowserViewController: UITextFieldDelegate {
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        textField.resignFirstResponder()
-        guard let url = NetexURL.resolved(from: textField.text ?? "") else { return false }
-        load(url)
-        return true
-    }
-}
-
 extension BrowserViewController: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         if webView === pageView {
@@ -504,7 +564,7 @@ extension BrowserViewController: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if webView === pageView {
-            syncAddress(webView.url)
+            syncPageTitle(url: webView.url)
             panelRenderer.refreshSource()
             NetexMetrics.mark("wk-did-finish", metadata: ["url": webView.url?.absoluteString ?? ""])
         } else if webView === threePanelView {
@@ -515,7 +575,7 @@ extension BrowserViewController: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if webView === pageView {
             let targetIsMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
-            if navigationPolicy.decision(for: navigationAction.request.url, targetIsMainFrame: targetIsMainFrame) == .block {
+            if navigationDecision(for: navigationAction.request.url, targetIsMainFrame: targetIsMainFrame) == .block {
                 showBlockedNavigation(navigationAction.request.url)
                 decisionHandler(.cancel)
                 return
@@ -528,13 +588,25 @@ extension BrowserViewController: WKNavigationDelegate {
 extension BrowserViewController: WKUIDelegate {
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-            if navigationPolicy.decision(for: url, targetIsMainFrame: true) == .allow {
+            if navigationDecision(for: url, targetIsMainFrame: true) == .allow {
                 load(url)
             } else {
                 showBlockedNavigation(url)
             }
         }
         return nil
+    }
+}
+
+private extension BrowserViewController {
+    func navigationDecision(for url: URL?, targetIsMainFrame: Bool) -> NetexNavigationPolicy.Decision {
+        if targetIsMainFrame,
+           let host = url?.host?.lowercased(),
+           let customMainFrameHost,
+           host == customMainFrameHost {
+            return .allow
+        }
+        return navigationPolicy.decision(for: url, targetIsMainFrame: targetIsMainFrame)
     }
 }
 
