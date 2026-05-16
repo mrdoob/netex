@@ -15,6 +15,7 @@ object DocumentStartScripts {
         Asset("threejs-devtools/content-script.js", wrap = Wrap.CONTENT_SCRIPT),
         Asset("threejs-devtools/background.js", wrap = Wrap.IIFE),
         Asset("network-shim.js"),
+        Asset("orientation-shim.js"),
     )
 
     private enum class Wrap { NONE, IIFE, CONTENT_SCRIPT }

@@ -4,7 +4,10 @@ import org.json.JSONObject
 
 private const val TAG = "ExtensionBridge"
 
-class ExtensionBridge(private val router: ExtensionRouter) : JsonMessageBridge(TAG) {
+class ExtensionBridge(
+    private val router: ExtensionRouter,
+    private val onOrientationLock: (String?) -> Unit,
+) : JsonMessageBridge(TAG) {
 
     companion object {
         const val JS_OBJECT_NAME = "AndroidExtension"
@@ -18,6 +21,8 @@ class ExtensionBridge(private val router: ExtensionRouter) : JsonMessageBridge(T
             EnvelopeType.PAGE_READY -> router.onPageReady()
             EnvelopeType.PORT_MESSAGE -> router.onPagePortMessage(obj)
             EnvelopeType.PORT_DISCONNECT -> router.onPagePortDisconnect(obj)
+            EnvelopeType.ORIENTATION_LOCK -> onOrientationLock(obj.optString("orientation"))
+            EnvelopeType.ORIENTATION_UNLOCK -> onOrientationLock(null)
         }
     }
 }

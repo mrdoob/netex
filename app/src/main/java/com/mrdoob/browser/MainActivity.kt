@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.Bitmap
 import android.graphics.drawable.ClipDrawable
@@ -15,6 +16,7 @@ import android.os.Bundle
 import android.util.Log
 import android.util.Patterns
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import android.webkit.ConsoleMessage
@@ -30,6 +32,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -52,7 +55,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var panel: PanelRenderer
 
     private val extensionRouter = ExtensionRouter()
-    private val extensionBridge = ExtensionBridge(extensionRouter)
+    private val extensionBridge = ExtensionBridge(extensionRouter) { type -> applyOrientationLock(type) }
     private val panelExtensionBridge = PanelExtensionBridge(extensionRouter)
     private val networkBridge = NetworkBridge { rid, dataUrl -> panel.deliverBlob(rid, dataUrl) }
     private val panelBridge = PanelBridge { rid -> fetchBlobFromMain(rid) }
@@ -68,6 +71,10 @@ class MainActivity : AppCompatActivity() {
     private var currentTitle: String? = null
     private var currentTab = PanelRenderer.Tab.SOURCE
     private var sourceDirty = true
+
+    private var fullscreenView: View? = null
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
+    private var preFullscreenOrientation: Int = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -122,6 +129,13 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         val url = currentUrl.takeIf { it.isNotEmpty() && it != BLANK_URL }
         getPreferences(MODE_PRIVATE).edit().putString(PREF_LAST_URL, url).apply()
+    }
+
+    override fun onDestroy() {
+        // onRenderProcessGone → recreate() and process death mid-fullscreen leave the
+        // custom view attached to decorView; clean up so we don't leak.
+        if (fullscreenView != null) exitFullscreen()
+        super.onDestroy()
     }
 
     private fun lastSessionUrl(): String? = getPreferences(MODE_PRIVATE)
@@ -260,7 +274,71 @@ class MainActivity : AppCompatActivity() {
                 }
                 return true
             }
+
+            override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                enterFullscreen(view, callback)
+            }
+
+            override fun onHideCustomView() {
+                exitFullscreen()
+            }
         }
+    }
+
+    private fun enterFullscreen(view: View, callback: WebChromeClient.CustomViewCallback) {
+        if (fullscreenView != null) {
+            callback.onCustomViewHidden()
+            return
+        }
+        fullscreenView = view
+        fullscreenCallback = callback
+        preFullscreenOrientation = requestedOrientation
+        binding.root.visibility = View.GONE
+        (window.decorView as ViewGroup).addView(
+            view,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        )
+        WindowInsetsControllerCompat(window, view).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    private fun exitFullscreen() {
+        val view = fullscreenView ?: return
+        (window.decorView as ViewGroup).removeView(view)
+        binding.root.visibility = View.VISIBLE
+        fullscreenView = null
+        fullscreenCallback?.onCustomViewHidden()
+        fullscreenCallback = null
+        setRequestedOrientationIfChanged(preFullscreenOrientation)
+        WindowInsetsControllerCompat(window, window.decorView)
+            .show(WindowInsetsCompat.Type.systemBars())
+    }
+
+    // Per the Screen Orientation API, lock() is only valid in fullscreen — rotating the
+    // whole browser otherwise would be hostile.
+    private fun applyOrientationLock(type: String?) {
+        if (fullscreenView == null) return
+        val target = when (type) {
+            null -> preFullscreenOrientation
+            "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            "landscape-primary" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            "landscape-secondary" -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+            "portrait" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            "portrait-primary" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            "portrait-secondary" -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+            "any" -> ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+            "natural" -> ActivityInfo.SCREEN_ORIENTATION_USER
+            else -> return
+        }
+        setRequestedOrientationIfChanged(target)
+    }
+
+    // setRequestedOrientation is not a no-op when the value is unchanged — it round-trips
+    // through ActivityClient. Pages can spam lock() during transitions; gate the write.
+    private fun setRequestedOrientationIfChanged(value: Int) {
+        if (requestedOrientation != value) requestedOrientation = value
     }
 
     private fun observeDetectionState() {
@@ -463,7 +541,9 @@ class MainActivity : AppCompatActivity() {
     private fun installBackHandler() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (binding.webView.canGoBack()) {
+                if (fullscreenView != null) {
+                    exitFullscreen()
+                } else if (binding.webView.canGoBack()) {
                     binding.webView.goBack()
                 } else {
                     isEnabled = false

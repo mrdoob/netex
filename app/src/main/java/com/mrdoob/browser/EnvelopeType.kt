@@ -8,4 +8,6 @@ object EnvelopeType {
     const val PAGE_READY = "page-ready"
     const val ACTION_SET_BADGE_TEXT = "action.setBadgeText"
     const val ACTION_SET_BADGE_BACKGROUND_COLOR = "action.setBadgeBackgroundColor"
+    const val ORIENTATION_LOCK = "orientation.lock"
+    const val ORIENTATION_UNLOCK = "orientation.unlock"
 }
