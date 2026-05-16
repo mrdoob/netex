@@ -71,6 +71,7 @@ final class BrowserViewController: UIViewController {
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.customUserAgent = "Netex/0.3.0 iOS"
+        webView.accessibilityIdentifier = "netex.page"
         enableInspection(webView)
         return webView
     }
@@ -83,6 +84,7 @@ final class BrowserViewController: UIViewController {
         configuration.setURLSchemeHandler(NetexAssetSchemeHandler(), forURLScheme: NetexAssetSchemeHandler.scheme)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.accessibilityIdentifier = messageName == "panel" ? "netex.panel" : "netex.\(messageName)"
         enableInspection(webView)
         return webView
     }
@@ -101,6 +103,7 @@ final class BrowserViewController: UIViewController {
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
+        webView.accessibilityIdentifier = "netex.threePanel"
         enableInspection(webView)
         webView.load(URLRequest(url: AssetLoader.assetURL("NetexAssets/threejs-devtools/panel/panel.html")))
         return webView
@@ -181,46 +184,9 @@ final class BrowserViewController: UIViewController {
     }
 
     private func installPageScripts(into controller: WKUserContentController) {
-        let mode = NetexShimMode.current
-        var scripts: [String] = [AssetLoader.text("performance-shim", ext: "js")]
-
-        if mode.installsConsole {
-            scripts.append(AssetLoader.text("console-shim", ext: "js")
-                .replacingOccurrences(of: "AndroidExtension.postMessage", with: "window.webkit.messageHandlers.netex.postMessage"))
+        NetexScriptPlan(mode: .current).scripts.forEach { script in
+            controller.addUserScript(WKUserScript(source: script.source, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         }
-        if mode.installsNetwork {
-            scripts.append(AssetLoader.text("network-shim", ext: "js")
-                .replacingOccurrences(of: "AndroidNetwork.postMessage", with: "window.webkit.messageHandlers.netex.postMessage"))
-        }
-        if mode.installsExtension {
-            scripts.append(buildThreePageShim())
-        }
-        if mode != .off {
-            scripts.append(AssetLoader.text("orientation-shim", ext: "js"))
-        }
-
-        scripts.filter { !$0.isEmpty }.forEach {
-            controller.addUserScript(WKUserScript(source: $0, injectionTime: .atDocumentStart, forMainFrameOnly: false))
-        }
-    }
-
-    private func buildThreePageShim() -> String {
-        let constants = AssetLoader.text("constants", ext: "js")
-        let chrome = AssetLoader.text("chrome-shim-page", ext: "js")
-            .replacingOccurrences(of: "AndroidExtension.postMessage", with: "window.webkit.messageHandlers.netex.postMessage")
-            .replacingOccurrences(of: "asset:///threejs-devtools/", with: "\(NetexAssetSchemeHandler.scheme)://bundle/NetexAssets/threejs-devtools/")
-        let bridge = AssetLoader.text("bridge", ext: "js")
-        let highlight = AssetLoader.text("highlight", ext: "js")
-        let content = AssetLoader.text("content-script", ext: "js")
-        let background = AssetLoader.text("background", ext: "js")
-        return [
-            constants,
-            chrome,
-            bridge,
-            highlight,
-            "(function(chrome){\n\(content)\n})(window.__netexExt.createContentScriptChrome());",
-            background
-        ].joined(separator: "\n;\n")
     }
 
     private func installObservers() {
@@ -240,10 +206,13 @@ final class BrowserViewController: UIViewController {
     }
 
     private func loadInitialPage() {
-        if ProcessInfo.processInfo.arguments.contains("--netex-reset") {
+        let options = NetexLaunchOptions()
+        if options.reset {
             UserDefaults.standard.removeObject(forKey: "lastURL")
         }
-        if let saved = UserDefaults.standard.string(forKey: "lastURL"), let url = URL(string: saved), !saved.hasPrefix("\(NetexAssetSchemeHandler.scheme):") {
+        if let url = options.initialURL {
+            load(url, persist: false)
+        } else if let saved = UserDefaults.standard.string(forKey: "lastURL"), let url = URL(string: saved), !saved.hasPrefix("\(NetexAssetSchemeHandler.scheme):") {
             load(url)
         } else {
             loadStartPage()

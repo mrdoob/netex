@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
+body { margin: 0; padding: 28px 22px; background: Canvas; color: CanvasText; }
+main { max-width: 720px; margin: 0 auto; }
+h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: 0; }
+p { color: color-mix(in srgb, CanvasText 70%, Canvas 30%); line-height: 1.45; }
+code { display: block; padding: 12px; border: 1px solid color-mix(in srgb, CanvasText 18%, Canvas 82%); border-radius: 8px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Netex Stress</h1>
+  <p>This local page emits 1,000 console rows and several fetches for bridge profiling.</p>
+  <code id="status">Starting...</code>
+</main>
+<script>
+(function () {
+  var status = document.getElementById('status');
+  performance.mark('netex-stress-start');
+  for (var i = 0; i < 1000; i++) {
+    console.log('netex stress row', i, { batch: Math.floor(i / 100), value: i });
+  }
+  Promise.all([
+    fetch('start.html').then(function (r) { return r.text(); }),
+    fetch('panel-shell.html').then(function (r) { return r.text(); }),
+    fetch('vendor/highlight.min.js').then(function (r) { return r.text(); })
+  ]).then(function () {
+    performance.mark('netex-stress-complete');
+    status.textContent = 'Complete: emitted 1,000 console rows and 3 local fetches.';
+  }).catch(function (error) {
+    status.textContent = 'Stress error: ' + error;
+  });
+})();
+</script>
+</body>
+</html>

@@ -50,4 +50,22 @@ final class BridgeEnvelopeTests: XCTestCase {
         XCTAssertEqual(envelope.type, .consoleBatch)
         XCTAssertEqual(entries.count, 1)
     }
+
+    func testEnvelopeDecodesNetworkBatch() throws {
+        let body: [String: Any] = [
+            "type": "network.batch",
+            "source": "page",
+            "payload": [
+                "entries": [
+                    ["method": "GET", "url": "https://threejs.org/examples/", "status": 200]
+                ]
+            ]
+        ]
+
+        let envelope = try XCTUnwrap(BridgeEnvelope(body))
+        let entries = try XCTUnwrap(envelope.payload["entries"] as? [[String: Any]])
+
+        XCTAssertEqual(envelope.type, .networkBatch)
+        XCTAssertEqual(entries.first?["url"] as? String, "https://threejs.org/examples/")
+    }
 }

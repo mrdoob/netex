@@ -60,6 +60,25 @@ Use this for A/B profiling when a page feels slow. In debug builds, iOS Web Insp
 - The JS performance shim forwards browser `performance.mark` events into the same native log lane.
 - The local start page should appear quickly because no CDN or remote Three.js example is loaded at app launch.
 
+For a repeatable simulator receipt:
+
+```sh
+cd iOS/NetexIOS
+NETEX_PROFILE_RUN_TESTS=1 Scripts/profile_netex_ios.sh
+```
+
+The script records branch, commit, Xcode version, destination, build time, optional test time, launch output, screenshot, and native log paths under the local Codex artifact folder by default. Use `NETEX_SIM_ID`, `NETEX_DESTINATION`, and `NETEX_PROFILE_DIR` to override the simulator and output location.
+
+To launch the local stress harness manually:
+
+```sh
+xcrun simctl launch booted com.mrdoob.netex.ios --netex-reset --netex-url netex-assets://bundle/NetexAssets/stress.html
+```
+
+## Upstream PR Notes
+
+Use `PR_NOTES.md` as the draft PR body and contribution checklist. It documents architecture, verification, signing posture, known deltas, and third-party asset license checks.
+
 ## Install On A Paired iPhone
 
 For a local development install, pass your own Apple development team and a bundle id that belongs to that team:

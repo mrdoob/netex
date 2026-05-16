@@ -16,4 +16,15 @@ final class NetexIOSUITests: XCTestCase {
         tabs.buttons["Three.js"].tap()
         tabs.buttons["Console"].tap()
     }
+
+    func testThreeTabExposesPanelSurface() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--netex-reset"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Netex"].waitForExistence(timeout: 5))
+        app.segmentedControls["netex.tabs"].buttons["Three.js"].tap()
+
+        XCTAssertTrue(app.webViews["netex.threePanel"].waitForExistence(timeout: 5))
+    }
 }

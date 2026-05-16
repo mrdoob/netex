@@ -15,6 +15,7 @@
 		3D5304513498BCA91A90B07F /* AssetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79D17F866DABF428BB51D58 /* AssetLoader.swift */; };
 		44657EF6003AF863B50978C7 /* NetexIOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 880CEA4BB724C14B9AD3232F /* NetexIOSUITests.swift */; };
 		449500022EECC9E02E85F425 /* MessageBatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD18BC9B751C6D892E2C52FF /* MessageBatcherTests.swift */; };
+		5762DA33A0B86C1A0679CBC7 /* NetexLaunchOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81406B79039A9EE6787A725C /* NetexLaunchOptions.swift */; };
 		5CC8445CD71E09BE18797DFC /* AssetAndShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E670EB6309C3583A16594F /* AssetAndShimTests.swift */; };
 		893D6C1D8D7AAE0C9A450A38 /* ExtensionRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C1C2C8DE65A8B6E1D97436 /* ExtensionRouterTests.swift */; };
 		99B95527F86764F7ECD7E454 /* ExtensionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076711068497F696AD8DD970 /* ExtensionRouter.swift */; };
@@ -26,6 +27,7 @@
 		D070A04854259CD8632A28E3 /* BrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 864478E2350441265FC7BBE4 /* BrowserView.swift */; };
 		DB40245F8C94B23BC102C05E /* NetexAssets in Resources */ = {isa = PBXBuildFile; fileRef = 86E78880DE63A53B7C270634 /* NetexAssets */; };
 		E0DF28CC67A789E5A2C4932D /* BrowserViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BA9A8FD4DB1703A6854E5 /* BrowserViewController.swift */; };
+		E4F2CE830D70DFDDA0F7D107 /* NetexScriptPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE89766F210102B9A2471ED /* NetexScriptPlan.swift */; };
 		EFD9E8FE3D59F8512576BEA4 /* NetexAssetSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2374503D6B1805B821552106 /* NetexAssetSchemeHandler.swift */; };
 /* End PBXBuildFile section */
 
@@ -57,8 +59,10 @@
 		40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexIOSApp.swift; sourceTree = "<group>"; };
 		4FC5DC0E8DD1A37C6E67F4C7 /* MessageBatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBatcher.swift; sourceTree = "<group>"; };
 		5630A8724AA70C4392E0B69D /* BridgeEnvelopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeEnvelopeTests.swift; sourceTree = "<group>"; };
+		5FE89766F210102B9A2471ED /* NetexScriptPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexScriptPlan.swift; sourceTree = "<group>"; };
 		69B8EF8CDB6EFDA3BA539B8E /* NetexShimMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexShimMode.swift; sourceTree = "<group>"; };
 		714709F695BAB34053A7027B /* NetexURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexURLTests.swift; sourceTree = "<group>"; };
+		81406B79039A9EE6787A725C /* NetexLaunchOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexLaunchOptions.swift; sourceTree = "<group>"; };
 		864478E2350441265FC7BBE4 /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserView.swift; sourceTree = "<group>"; };
 		86E78880DE63A53B7C270634 /* NetexAssets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NetexAssets; path = Resources/NetexAssets; sourceTree = SOURCE_ROOT; };
 		880CEA4BB724C14B9AD3232F /* NetexIOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexIOSUITests.swift; sourceTree = "<group>"; };
@@ -86,7 +90,9 @@
 				4FC5DC0E8DD1A37C6E67F4C7 /* MessageBatcher.swift */,
 				2374503D6B1805B821552106 /* NetexAssetSchemeHandler.swift */,
 				40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */,
+				81406B79039A9EE6787A725C /* NetexLaunchOptions.swift */,
 				CE4BB3E59C92D5BE9D429CB0 /* NetexMetrics.swift */,
+				5FE89766F210102B9A2471ED /* NetexScriptPlan.swift */,
 				69B8EF8CDB6EFDA3BA539B8E /* NetexShimMode.swift */,
 				F738148F8259223E6C560950 /* NetexURL.swift */,
 				368F07F270F3F6460936F6F1 /* PanelMessage.swift */,
@@ -274,7 +280,9 @@
 				1160D0AE04475AA32AE85F54 /* MessageBatcher.swift in Sources */,
 				EFD9E8FE3D59F8512576BEA4 /* NetexAssetSchemeHandler.swift in Sources */,
 				365E8625BBBA69BA5E3362AE /* NetexIOSApp.swift in Sources */,
+				5762DA33A0B86C1A0679CBC7 /* NetexLaunchOptions.swift in Sources */,
 				AFB62E66F6735FCFAF45E065 /* NetexMetrics.swift in Sources */,
+				E4F2CE830D70DFDDA0F7D107 /* NetexScriptPlan.swift in Sources */,
 				CD19D6F01D1775A2D868F133 /* NetexShimMode.swift in Sources */,
 				CDB34F19A752DFE7F222E66A /* NetexURL.swift in Sources */,
 				9B17C02D2880FE765DF1A657 /* PanelMessage.swift in Sources */,
