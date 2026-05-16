@@ -1,0 +1,470 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0797F5507C0EA477FF0A0985 /* chrome-shim-page.js in Resources */ = {isa = PBXBuildFile; fileRef = F5C33F5BFFF5C7B0073739BD /* chrome-shim-page.js */; };
+		14A09D71172402C0238EB45D /* panel.js in Resources */ = {isa = PBXBuildFile; fileRef = 7E79E5F450AACBDE8E3380B9 /* panel.js */; };
+		1BB373EA7D360EFE5782E07B /* NetexURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714709F695BAB34053A7027B /* NetexURLTests.swift */; };
+		365E8625BBBA69BA5E3362AE /* NetexIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */; };
+		3D5304513498BCA91A90B07F /* AssetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79D17F866DABF428BB51D58 /* AssetLoader.swift */; };
+		8E9292F225E6760F2BC378E2 /* console-shim.js in Resources */ = {isa = PBXBuildFile; fileRef = 268AF2AA926BCEE3505AF91C /* console-shim.js */; };
+		9A060A68C1114ADAFC4F01CC /* orientation-shim.js in Resources */ = {isa = PBXBuildFile; fileRef = 05E77332DB330539A3E0FF80 /* orientation-shim.js */; };
+		9B17C02D2880FE765DF1A657 /* PanelMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368F07F270F3F6460936F6F1 /* PanelMessage.swift */; };
+		A861EF2BA86526C3931919E3 /* chrome-shim-panel.js in Resources */ = {isa = PBXBuildFile; fileRef = 913DDC3420953E06BDD394C9 /* chrome-shim-panel.js */; };
+		B4015CF425F61FBDC2EAF42F /* network-shim.js in Resources */ = {isa = PBXBuildFile; fileRef = D29FB8DF2F472C39FF5FDD12 /* network-shim.js */; };
+		B74943E5E4EE5A12649259BC /* PanelRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCCE39EF3153BD9390D32C0 /* PanelRenderer.swift */; };
+		CDB34F19A752DFE7F222E66A /* NetexURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = F738148F8259223E6C560950 /* NetexURL.swift */; };
+		D070A04854259CD8632A28E3 /* BrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 864478E2350441265FC7BBE4 /* BrowserView.swift */; };
+		E0DF28CC67A789E5A2C4932D /* BrowserViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BA9A8FD4DB1703A6854E5 /* BrowserViewController.swift */; };
+		E8DA1F6A7A2AA37E004D63D2 /* panel-shell.html in Resources */ = {isa = PBXBuildFile; fileRef = 99B260F8CB06C5ACD97073A4 /* panel-shell.html */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		BFFCAB9C7ABA1D574D68BB7E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8BBFF5E15F6CEEEF4A09739B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D8F6BC58F50AAC6F79A55F19;
+			remoteInfo = NetexIOS;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		05E77332DB330539A3E0FF80 /* orientation-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "orientation-shim.js"; sourceTree = "<group>"; };
+		268AF2AA926BCEE3505AF91C /* console-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "console-shim.js"; sourceTree = "<group>"; };
+		368F07F270F3F6460936F6F1 /* PanelMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelMessage.swift; sourceTree = "<group>"; };
+		3DDAE4466FA69ADB774C1BE3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexIOSApp.swift; sourceTree = "<group>"; };
+		714709F695BAB34053A7027B /* NetexURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexURLTests.swift; sourceTree = "<group>"; };
+		7E79E5F450AACBDE8E3380B9 /* panel.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = panel.js; sourceTree = "<group>"; };
+		864478E2350441265FC7BBE4 /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserView.swift; sourceTree = "<group>"; };
+		913DDC3420953E06BDD394C9 /* chrome-shim-panel.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "chrome-shim-panel.js"; sourceTree = "<group>"; };
+		99B260F8CB06C5ACD97073A4 /* panel-shell.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "panel-shell.html"; sourceTree = "<group>"; };
+		9DE0554C827AC764EDF26EDD /* NetexIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NetexIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D29FB8DF2F472C39FF5FDD12 /* network-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "network-shim.js"; sourceTree = "<group>"; };
+		E79D17F866DABF428BB51D58 /* AssetLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLoader.swift; sourceTree = "<group>"; };
+		E86F755AC0F8A70DF83848D7 /* NetexIOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NetexIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE8BA9A8FD4DB1703A6854E5 /* BrowserViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewController.swift; sourceTree = "<group>"; };
+		F5C33F5BFFF5C7B0073739BD /* chrome-shim-page.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "chrome-shim-page.js"; sourceTree = "<group>"; };
+		F738148F8259223E6C560950 /* NetexURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexURL.swift; sourceTree = "<group>"; };
+		FBCCE39EF3153BD9390D32C0 /* PanelRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelRenderer.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0A1528E1DACDF17D872F36FD /* NetexIOS */ = {
+			isa = PBXGroup;
+			children = (
+				E79D17F866DABF428BB51D58 /* AssetLoader.swift */,
+				864478E2350441265FC7BBE4 /* BrowserView.swift */,
+				EE8BA9A8FD4DB1703A6854E5 /* BrowserViewController.swift */,
+				3DDAE4466FA69ADB774C1BE3 /* Info.plist */,
+				40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */,
+				F738148F8259223E6C560950 /* NetexURL.swift */,
+				368F07F270F3F6460936F6F1 /* PanelMessage.swift */,
+				FBCCE39EF3153BD9390D32C0 /* PanelRenderer.swift */,
+			);
+			name = NetexIOS;
+			path = Sources/NetexIOS;
+			sourceTree = "<group>";
+		};
+		2F1B9D0F4FCBDCE25EFCCB44 /* NetexIOSTests */ = {
+			isa = PBXGroup;
+			children = (
+				714709F695BAB34053A7027B /* NetexURLTests.swift */,
+			);
+			name = NetexIOSTests;
+			path = Tests/NetexIOSTests;
+			sourceTree = "<group>";
+		};
+		3BDF250D244D2B33AD529274 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				8970299956E62FB7EFF46F4C /* NetexAssets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		65864E4550065DB34E40F58E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9DE0554C827AC764EDF26EDD /* NetexIOS.app */,
+				E86F755AC0F8A70DF83848D7 /* NetexIOSTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8970299956E62FB7EFF46F4C /* NetexAssets */ = {
+			isa = PBXGroup;
+			children = (
+				F5C33F5BFFF5C7B0073739BD /* chrome-shim-page.js */,
+				913DDC3420953E06BDD394C9 /* chrome-shim-panel.js */,
+				268AF2AA926BCEE3505AF91C /* console-shim.js */,
+				D29FB8DF2F472C39FF5FDD12 /* network-shim.js */,
+				05E77332DB330539A3E0FF80 /* orientation-shim.js */,
+				99B260F8CB06C5ACD97073A4 /* panel-shell.html */,
+				7E79E5F450AACBDE8E3380B9 /* panel.js */,
+			);
+			path = NetexAssets;
+			sourceTree = "<group>";
+		};
+		DB4A9B286A090A170360A746 = {
+			isa = PBXGroup;
+			children = (
+				0A1528E1DACDF17D872F36FD /* NetexIOS */,
+				2F1B9D0F4FCBDCE25EFCCB44 /* NetexIOSTests */,
+				3BDF250D244D2B33AD529274 /* Resources */,
+				65864E4550065DB34E40F58E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		187309BBA654A44837CBF0DD /* NetexIOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 33B2F4F355830A0D12D0E918 /* Build configuration list for PBXNativeTarget "NetexIOSTests" */;
+			buildPhases = (
+				9F651B43DFA9B0ED2F2DA27E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0F358B227EC592620A8414E4 /* PBXTargetDependency */,
+			);
+			name = NetexIOSTests;
+			packageProductDependencies = (
+			);
+			productName = NetexIOSTests;
+			productReference = E86F755AC0F8A70DF83848D7 /* NetexIOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D8F6BC58F50AAC6F79A55F19 /* NetexIOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5343819F48FDB30B82D91BD7 /* Build configuration list for PBXNativeTarget "NetexIOS" */;
+			buildPhases = (
+				9FE4052ABC14C434E89EEAF5 /* Sources */,
+				480D67C22002B1A2A942DC16 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NetexIOS;
+			packageProductDependencies = (
+			);
+			productName = NetexIOS;
+			productReference = 9DE0554C827AC764EDF26EDD /* NetexIOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8BBFF5E15F6CEEEF4A09739B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					187309BBA654A44837CBF0DD = {
+						ProvisioningStyle = Automatic;
+					};
+					D8F6BC58F50AAC6F79A55F19 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 6B8DBC08537604DF484808B2 /* Build configuration list for PBXProject "NetexIOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = DB4A9B286A090A170360A746;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D8F6BC58F50AAC6F79A55F19 /* NetexIOS */,
+				187309BBA654A44837CBF0DD /* NetexIOSTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		480D67C22002B1A2A942DC16 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0797F5507C0EA477FF0A0985 /* chrome-shim-page.js in Resources */,
+				A861EF2BA86526C3931919E3 /* chrome-shim-panel.js in Resources */,
+				8E9292F225E6760F2BC378E2 /* console-shim.js in Resources */,
+				B4015CF425F61FBDC2EAF42F /* network-shim.js in Resources */,
+				9A060A68C1114ADAFC4F01CC /* orientation-shim.js in Resources */,
+				E8DA1F6A7A2AA37E004D63D2 /* panel-shell.html in Resources */,
+				14A09D71172402C0238EB45D /* panel.js in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9F651B43DFA9B0ED2F2DA27E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1BB373EA7D360EFE5782E07B /* NetexURLTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9FE4052ABC14C434E89EEAF5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3D5304513498BCA91A90B07F /* AssetLoader.swift in Sources */,
+				D070A04854259CD8632A28E3 /* BrowserView.swift in Sources */,
+				E0DF28CC67A789E5A2C4932D /* BrowserViewController.swift in Sources */,
+				365E8625BBBA69BA5E3362AE /* NetexIOSApp.swift in Sources */,
+				CDB34F19A752DFE7F222E66A /* NetexURL.swift in Sources */,
+				9B17C02D2880FE765DF1A657 /* PanelMessage.swift in Sources */,
+				B74943E5E4EE5A12649259BC /* PanelRenderer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0F358B227EC592620A8414E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D8F6BC58F50AAC6F79A55F19 /* NetexIOS */;
+			targetProxy = BFFCAB9C7ABA1D574D68BB7E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0943FB9B48F2918D7CBAA6AE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mrdoob.netex.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NetexIOS.app/NetexIOS";
+			};
+			name = Debug;
+		};
+		0A7C170AE101463C906F0D13 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		6047519EE528A4DA456C1FD6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/NetexIOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mrdoob.netex.ios;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6A1B24FB1DF2A6ED747D68A9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/NetexIOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mrdoob.netex.ios;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8F0F0BF3BCF62B6CF13B9CC1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		B3B45EC9BD204254C6C64C06 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mrdoob.netex.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NetexIOS.app/NetexIOS";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		33B2F4F355830A0D12D0E918 /* Build configuration list for PBXNativeTarget "NetexIOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0943FB9B48F2918D7CBAA6AE /* Debug */,
+				B3B45EC9BD204254C6C64C06 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5343819F48FDB30B82D91BD7 /* Build configuration list for PBXNativeTarget "NetexIOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6A1B24FB1DF2A6ED747D68A9 /* Debug */,
+				6047519EE528A4DA456C1FD6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6B8DBC08537604DF484808B2 /* Build configuration list for PBXProject "NetexIOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8F0F0BF3BCF62B6CF13B9CC1 /* Debug */,
+				0A7C170AE101463C906F0D13 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8BBFF5E15F6CEEEF4A09739B /* Project object */;
+}
