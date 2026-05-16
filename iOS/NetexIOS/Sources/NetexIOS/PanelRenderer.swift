@@ -26,7 +26,7 @@ final class PanelRenderer: NSObject, WKNavigationDelegate {
         let script = AssetLoader.text("panel", ext: "js")
             .replacingOccurrences(of: "AndroidPanel.postMessage", with: "window.webkit.messageHandlers.panel.postMessage")
         let html = shell.replacingOccurrences(of: "<!--__PANEL_JS__-->", with: "<script>\(script)</script>")
-        panelView.loadHTMLString(html, baseURL: URL(string: "https://cdn.jsdelivr.net/"))
+        panelView.loadHTMLString(html, baseURL: AssetLoader.assetURL("NetexAssets/"))
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -74,6 +74,10 @@ final class PanelRenderer: NSObject, WKNavigationDelegate {
         }
     }
 
+    func appendNetwork(_ entries: [NetworkEntry], pageURL: String) {
+        entries.forEach { appendNetwork($0, pageURL: pageURL) }
+    }
+
     func appendConsole(_ entry: ConsoleEntry) {
         let payload: [String: Any] = [
             "level": entry.level,
@@ -86,9 +90,19 @@ final class PanelRenderer: NSObject, WKNavigationDelegate {
         }
     }
 
+    func appendConsole(_ entries: [ConsoleEntry]) {
+        entries.forEach { appendConsole($0) }
+    }
+
     func deliverEvalResult(id: String, resultJSON: String) {
         afterLoad { [weak self] in
             self?.evaluate("window.__panel.deliverEvalResult(\(JSONBridge.quoted(id)), \(JSONBridge.quoted(resultJSON)))")
+        }
+    }
+
+    func deliverBlob(rid: String, dataURL: String) {
+        afterLoad { [weak self] in
+            self?.evaluate("window.__panel.deliverBlob(\(JSONBridge.quoted(rid)), \(JSONBridge.quoted(dataURL)))")
         }
     }
 

@@ -2,54 +2,116 @@ import UIKit
 import WebKit
 
 final class BrowserViewController: UIViewController {
+    private enum PanelTab: Int {
+        case console = 0
+        case source = 1
+        case network = 2
+        case three = 3
+    }
+
     private let addressField = UITextField()
     private let reloadButton = UIButton(type: .system)
-    private let tabs = UISegmentedControl(items: ["Console", "Source", "Network"])
+    private let tabs = UISegmentedControl(items: ["Console", "Source", "Network", "Three.js"])
     private let pageProgress = UIProgressView(progressViewStyle: .bar)
+    private let panelContainer = UIView()
     private var pageView: WKWebView!
     private var panelView: WKWebView!
+    private var threePanelView: WKWebView!
     private var panelRenderer: PanelRenderer!
+    private var extensionRouter = ExtensionRouter()
+    private var blobStore = BlobStore(limit: 64)
+    private var panelHeightConstraint: NSLayoutConstraint!
     private var progressObservation: NSKeyValueObservation?
     private var titleObservation: NSKeyValueObservation?
     private var urlObservation: NSKeyValueObservation?
     private var currentPageURL = "about:blank"
 
+    private lazy var consoleBatcher = MessageBatcher<ConsoleEntry>(maxBatchSize: 32, delay: 0.05) { [weak self] batch in
+        self?.panelRenderer.appendConsole(batch)
+    }
+    private lazy var networkBatcher = MessageBatcher<NetworkEntry>(maxBatchSize: 32, delay: 0.05) { [weak self] batch in
+        guard let self else { return }
+        batch.forEach { self.panelRenderer.appendNetwork($0, pageURL: self.currentPageURL) }
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        NetexMetrics.mark("app-view-did-load")
         view.backgroundColor = .systemBackground
         buildWebViews()
         buildChrome()
         panelRenderer = PanelRenderer(panelView: panelView, pageView: pageView)
         panelRenderer.load()
         installObservers()
-        load(URL(string: "https://threejs.org/examples/")!)
+        loadInitialPage()
     }
 
     private func buildWebViews() {
+        pageView = makePageWebView()
+        panelView = makePanelWebView(messageName: "panel")
+        threePanelView = makeThreePanelWebView()
+        threePanelView.isHidden = true
+    }
+
+    private func makePageWebView() -> WKWebView {
         let contentController = WKUserContentController()
         contentController.add(self, name: "netex")
-        contentController.add(self, name: "network")
         installPageScripts(into: contentController)
 
         let configuration = WKWebViewConfiguration()
         configuration.userContentController = contentController
+        configuration.setURLSchemeHandler(NetexAssetSchemeHandler(), forURLScheme: NetexAssetSchemeHandler.scheme)
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
 
-        pageView = WKWebView(frame: .zero, configuration: configuration)
-        pageView.navigationDelegate = self
-        pageView.uiDelegate = self
-        pageView.allowsBackForwardNavigationGestures = true
-        pageView.customUserAgent = "Netex/0.3.0 iOS"
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = self
+        webView.uiDelegate = self
+        webView.allowsBackForwardNavigationGestures = true
+        webView.customUserAgent = "Netex/0.3.0 iOS"
+        enableInspection(webView)
+        return webView
+    }
 
-        let panelController = WKUserContentController()
-        panelController.add(self, name: "panel")
-        let panelConfiguration = WKWebViewConfiguration()
-        panelConfiguration.userContentController = panelController
-        panelConfiguration.defaultWebpagePreferences.allowsContentJavaScript = true
-        panelView = WKWebView(frame: .zero, configuration: panelConfiguration)
+    private func makePanelWebView(messageName: String) -> WKWebView {
+        let controller = WKUserContentController()
+        controller.add(self, name: messageName)
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController = controller
+        configuration.setURLSchemeHandler(NetexAssetSchemeHandler(), forURLScheme: NetexAssetSchemeHandler.scheme)
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        enableInspection(webView)
+        return webView
+    }
+
+    private func makeThreePanelWebView() -> WKWebView {
+        let controller = WKUserContentController()
+        controller.add(self, name: "netexPanel")
+        let shim = AssetLoader.text("chrome-shim-panel", ext: "js")
+            .replacingOccurrences(of: "AndroidExtensionPanel.postMessage", with: "window.webkit.messageHandlers.netexPanel.postMessage")
+            .replacingOccurrences(of: "asset:///threejs-devtools/", with: "\(NetexAssetSchemeHandler.scheme)://bundle/NetexAssets/threejs-devtools/")
+        controller.addUserScript(WKUserScript(source: shim, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController = controller
+        configuration.setURLSchemeHandler(NetexAssetSchemeHandler(), forURLScheme: NetexAssetSchemeHandler.scheme)
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = self
+        enableInspection(webView)
+        webView.load(URLRequest(url: AssetLoader.assetURL("NetexAssets/threejs-devtools/panel/panel.html")))
+        return webView
+    }
+
+    private func enableInspection(_ webView: WKWebView) {
+        #if DEBUG
+        if #available(iOS 16.4, *) {
+            webView.isInspectable = true
+        }
+        #endif
     }
 
     private func buildChrome() {
@@ -61,33 +123,50 @@ final class BrowserViewController: UIViewController {
         addressField.clearButtonMode = .whileEditing
         addressField.delegate = self
         addressField.placeholder = "Search or enter website"
+        addressField.accessibilityIdentifier = "netex.address"
 
         reloadButton.setImage(UIImage(systemName: "arrow.clockwise"), for: .normal)
         reloadButton.addTarget(self, action: #selector(reloadTapped), for: .touchUpInside)
+        reloadButton.accessibilityLabel = "Reload"
+        reloadButton.accessibilityIdentifier = "netex.reload"
 
         tabs.selectedSegmentIndex = 0
         tabs.addTarget(self, action: #selector(tabChanged), for: .valueChanged)
+        tabs.accessibilityIdentifier = "netex.tabs"
 
         let toolbar = UIStackView(arrangedSubviews: [addressField, reloadButton])
         toolbar.axis = .horizontal
         toolbar.spacing = 8
         toolbar.alignment = .center
+        toolbar.layoutMargins = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        toolbar.isLayoutMarginsRelativeArrangement = true
         reloadButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
 
         let panelHeader = UIStackView(arrangedSubviews: [tabs])
         panelHeader.axis = .horizontal
         panelHeader.layoutMargins = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
         panelHeader.isLayoutMarginsRelativeArrangement = true
+        panelHeader.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(panelPanned(_:))))
 
-        let stack = UIStackView(arrangedSubviews: [toolbar, pageProgress, pageView, panelHeader, panelView])
+        [panelView, threePanelView].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            panelContainer.addSubview($0)
+            NSLayoutConstraint.activate([
+                $0.leadingAnchor.constraint(equalTo: panelContainer.leadingAnchor),
+                $0.trailingAnchor.constraint(equalTo: panelContainer.trailingAnchor),
+                $0.topAnchor.constraint(equalTo: panelContainer.topAnchor),
+                $0.bottomAnchor.constraint(equalTo: panelContainer.bottomAnchor)
+            ])
+        }
+
+        let stack = UIStackView(arrangedSubviews: [toolbar, pageProgress, pageView, panelHeader, panelContainer])
         stack.axis = .vertical
         stack.spacing = 0
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
 
-        toolbar.layoutMargins = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
-        toolbar.isLayoutMarginsRelativeArrangement = true
-        pageView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.58).isActive = true
+        panelHeightConstraint = panelContainer.heightAnchor.constraint(equalToConstant: defaultPanelHeight)
+        panelHeightConstraint.isActive = true
 
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
@@ -97,16 +176,51 @@ final class BrowserViewController: UIViewController {
         ])
     }
 
+    private var defaultPanelHeight: CGFloat {
+        max(220, view.bounds.height * 0.34)
+    }
+
     private func installPageScripts(into controller: WKUserContentController) {
-        let consoleShim = AssetLoader.text("console-shim", ext: "js")
-            .replacingOccurrences(of: "AndroidBridge.postMessage", with: "window.webkit.messageHandlers.netex.postMessage")
-            .replacingOccurrences(of: "AndroidExtension.postMessage", with: "window.webkit.messageHandlers.netex.postMessage")
-        let networkShim = AssetLoader.text("network-shim", ext: "js")
-            .replacingOccurrences(of: "AndroidNetwork.postMessage", with: "window.webkit.messageHandlers.network.postMessage")
-        let orientationShim = AssetLoader.text("orientation-shim", ext: "js")
-        [consoleShim, networkShim, orientationShim].forEach {
+        let mode = NetexShimMode.current
+        var scripts: [String] = [AssetLoader.text("performance-shim", ext: "js")]
+
+        if mode.installsConsole {
+            scripts.append(AssetLoader.text("console-shim", ext: "js")
+                .replacingOccurrences(of: "AndroidExtension.postMessage", with: "window.webkit.messageHandlers.netex.postMessage"))
+        }
+        if mode.installsNetwork {
+            scripts.append(AssetLoader.text("network-shim", ext: "js")
+                .replacingOccurrences(of: "AndroidNetwork.postMessage", with: "window.webkit.messageHandlers.netex.postMessage"))
+        }
+        if mode.installsExtension {
+            scripts.append(buildThreePageShim())
+        }
+        if mode != .off {
+            scripts.append(AssetLoader.text("orientation-shim", ext: "js"))
+        }
+
+        scripts.filter { !$0.isEmpty }.forEach {
             controller.addUserScript(WKUserScript(source: $0, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         }
+    }
+
+    private func buildThreePageShim() -> String {
+        let constants = AssetLoader.text("constants", ext: "js")
+        let chrome = AssetLoader.text("chrome-shim-page", ext: "js")
+            .replacingOccurrences(of: "AndroidExtension.postMessage", with: "window.webkit.messageHandlers.netex.postMessage")
+            .replacingOccurrences(of: "asset:///threejs-devtools/", with: "\(NetexAssetSchemeHandler.scheme)://bundle/NetexAssets/threejs-devtools/")
+        let bridge = AssetLoader.text("bridge", ext: "js")
+        let highlight = AssetLoader.text("highlight", ext: "js")
+        let content = AssetLoader.text("content-script", ext: "js")
+        let background = AssetLoader.text("background", ext: "js")
+        return [
+            constants,
+            chrome,
+            bridge,
+            highlight,
+            "(function(chrome){\n\(content)\n})(window.__netexExt.createContentScriptChrome());",
+            background
+        ].joined(separator: "\n;\n")
     }
 
     private func installObservers() {
@@ -121,34 +235,204 @@ final class BrowserViewController: UIViewController {
         titleObservation = pageView.observe(\.title, options: [.new]) { [weak self] _, _ in
             self?.panelRenderer.refreshSource()
         }
+        NotificationCenter.default.addObserver(self, selector: #selector(saveCurrentURL), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(memoryWarning), name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
     }
 
-    private func load(_ url: URL) {
+    private func loadInitialPage() {
+        if ProcessInfo.processInfo.arguments.contains("--netex-reset") {
+            UserDefaults.standard.removeObject(forKey: "lastURL")
+        }
+        if let saved = UserDefaults.standard.string(forKey: "lastURL"), let url = URL(string: saved), !saved.hasPrefix("\(NetexAssetSchemeHandler.scheme):") {
+            load(url)
+        } else {
+            loadStartPage()
+        }
+    }
+
+    private func loadStartPage() {
+        load(AssetLoader.assetURL("NetexAssets/start.html"), persist: false)
+    }
+
+    private func load(_ url: URL, persist: Bool = true) {
+        NetexMetrics.mark("navigation-start", metadata: ["url": url.absoluteString])
         currentPageURL = url.absoluteString
         panelRenderer.clearNetwork()
         pageView.load(URLRequest(url: url))
         syncAddress(url)
+        if persist, url.scheme != NetexAssetSchemeHandler.scheme {
+            UserDefaults.standard.set(url.absoluteString, forKey: "lastURL")
+        }
     }
 
     private func syncAddress(_ url: URL?) {
         currentPageURL = url?.absoluteString ?? currentPageURL
         if !addressField.isFirstResponder {
-            addressField.text = NetexURL.displayURL(url)
+            addressField.text = url?.scheme == NetexAssetSchemeHandler.scheme ? "" : NetexURL.displayURL(url)
         }
     }
 
     @objc private func reloadTapped() {
-        pageView.reload()
+        if pageView.url?.scheme == NetexAssetSchemeHandler.scheme {
+            loadStartPage()
+        } else {
+            pageView.reload()
+        }
     }
 
     @objc private func tabChanged() {
-        let tab: PanelRenderer.Tab = switch tabs.selectedSegmentIndex {
-        case 1: .source
-        case 2: .network
-        default: .console
+        let tab = PanelTab(rawValue: tabs.selectedSegmentIndex) ?? .console
+        panelView.isHidden = tab == .three
+        threePanelView.isHidden = tab != .three
+
+        switch tab {
+        case .console:
+            panelRenderer.setTab(.console)
+        case .source:
+            panelRenderer.setTab(.source)
+            panelRenderer.refreshSource()
+        case .network:
+            panelRenderer.setTab(.network)
+        case .three:
+            NetexMetrics.mark("three-panel-visible")
         }
-        panelRenderer.setTab(tab)
-        if tab == .source { panelRenderer.refreshSource() }
+    }
+
+    @objc private func panelPanned(_ recognizer: UIPanGestureRecognizer) {
+        let translation = recognizer.translation(in: view)
+        let minHeight: CGFloat = 120
+        let maxHeight = max(minHeight, view.bounds.height - 180)
+        switch recognizer.state {
+        case .changed:
+            panelHeightConstraint.constant = min(max(panelHeightConstraint.constant - translation.y, minHeight), maxHeight)
+            recognizer.setTranslation(.zero, in: view)
+        case .ended, .cancelled:
+            let targets = [minHeight, view.bounds.height * 0.34, view.bounds.height * 0.66, maxHeight]
+            let nearest = targets.min(by: { abs($0 - panelHeightConstraint.constant) < abs($1 - panelHeightConstraint.constant) }) ?? defaultPanelHeight
+            UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut]) {
+                self.panelHeightConstraint.constant = nearest
+                self.view.layoutIfNeeded()
+            }
+        default:
+            break
+        }
+    }
+
+    @objc private func saveCurrentURL() {
+        guard let url = pageView.url, url.scheme != NetexAssetSchemeHandler.scheme else { return }
+        UserDefaults.standard.set(url.absoluteString, forKey: "lastURL")
+    }
+
+    @objc private func memoryWarning() {
+        NetexMetrics.mark("memory-warning")
+    }
+
+    private func route(_ envelope: BridgeEnvelope, from handlerName: String) {
+        switch envelope.type {
+        case .consoleEntry:
+            consoleBatcher.append(consoleEntry(from: envelope))
+            NetexMetrics.mark("first-console-row", metadata: ["source": envelope.source])
+        case .consoleBatch:
+            let entries = envelope.payload["entries"] as? [[String: Any]] ?? []
+            entries
+                .map { BridgeEnvelope(type: .consoleEntry, source: envelope.source, payload: $0) }
+                .forEach { consoleBatcher.append(consoleEntry(from: $0)) }
+        case .networkRecord:
+            networkBatcher.append(networkEntry(from: envelope))
+            NetexMetrics.mark("first-network-row", metadata: ["source": envelope.source])
+        case .networkBatch:
+            let entries = envelope.payload["entries"] as? [[String: Any]] ?? []
+            entries
+                .map { BridgeEnvelope(type: .networkRecord, source: envelope.source, payload: $0) }
+                .forEach { networkBatcher.append(networkEntry(from: $0)) }
+        case .blobResponse:
+            if let rid = envelope.payload["requestId"] as? String, let body = envelope.payload["body"] as? String {
+                blobStore.insert(rid, dataURL: body)
+                panelRenderer.deliverBlob(rid: rid, dataURL: body)
+            }
+        case .fetchBlob:
+            if let rid = envelope.payload["requestId"] as? String {
+                if let dataURL = blobStore.value(for: rid) {
+                    panelRenderer.deliverBlob(rid: rid, dataURL: dataURL)
+                } else {
+                    pageView.evaluateJavaScript("window.__netex && window.__netex.findBlob(\(JSONBridge.quoted(rid)))")
+                }
+            }
+        case .panelEval:
+            handlePanelEval(envelope)
+        case .perfMark:
+            NetexMetrics.mark(envelope.payload["name"] as? String ?? "perf.mark", metadata: envelope.payload)
+        case .pageReady:
+            NetexMetrics.mark("three-page-ready", metadata: envelope.payload)
+            replayPanelPortsToPage()
+        case .extensionPortConnect, .extensionPortDisconnect:
+            if handlerName == "netexPanel" {
+                extensionRouter.handlePanelEnvelope(envelope)
+                dispatchToPage(envelope)
+            } else {
+                dispatchToThreePanel(envelope)
+            }
+        case .extensionPortMessage:
+            if handlerName == "netexPanel" {
+                dispatchToPage(envelope)
+            } else {
+                dispatchToThreePanel(envelope)
+            }
+        case .actionSetBadgeText, .actionSetBadgeBackgroundColor, .actionSetIcon:
+            dispatchToThreePanel(envelope)
+        default:
+            if envelope.payload["method"] != nil || envelope.payload["url"] != nil {
+                networkBatcher.append(networkEntry(from: envelope))
+            }
+        }
+    }
+
+    private func replayPanelPortsToPage() {
+        extensionRouter.replayForPageReady().forEach { dispatchToPage($0) }
+    }
+
+    private func dispatchToPage(_ envelope: BridgeEnvelope) {
+        pageView.evaluateJavaScript("window.__netexExt && window.__netexExt.dispatchAllFrames(\(envelope.jsonString()))")
+    }
+
+    private func dispatchToThreePanel(_ envelope: BridgeEnvelope) {
+        threePanelView.evaluateJavaScript("window.__netexExt && window.__netexExt.dispatch(\(envelope.jsonString()))")
+    }
+
+    private func handlePanelEval(_ envelope: BridgeEnvelope) {
+        let evalID = envelope.id ?? envelope.payload["id"] as? String ?? UUID().uuidString
+        guard let source = envelope.payload["source"] as? String else { return }
+        pageView.evaluateJavaScript(source) { [weak self] value, error in
+            let result: [Any] = {
+                if let error { return [false, error.localizedDescription] }
+                if let value { return [true, String(describing: value)] }
+                return [true, "undefined"]
+            }()
+            self?.panelRenderer.deliverEvalResult(id: evalID, resultJSON: JSONBridge.jsonString(result))
+        }
+    }
+
+    private func consoleEntry(from envelope: BridgeEnvelope) -> ConsoleEntry {
+        ConsoleEntry(
+            level: envelope.payload["level"] as? String ?? "log",
+            segments: envelope.payload["segments"] as? [[String: Any]] ?? [["kind": "primitive", "text": envelope.payload["message"] as? String ?? ""]],
+            source: envelope.payload["sourceId"] as? String ?? envelope.source,
+            line: envelope.payload["line"] as? Int ?? envelope.payload["lineNumber"] as? Int ?? 0
+        )
+    }
+
+    private func networkEntry(from envelope: BridgeEnvelope) -> NetworkEntry {
+        NetworkEntry(
+            method: envelope.payload["method"] as? String ?? "GET",
+            url: envelope.payload["url"] as? String ?? "",
+            status: envelope.payload["status"] as? Int ?? 0,
+            body: envelope.payload["body"] as? String ?? "",
+            contentType: envelope.payload["contentType"] as? String ?? "",
+            durationMs: envelope.payload["durationMs"] as? Int ?? envelope.payload["duration"] as? Int ?? 0,
+            size: envelope.payload["size"] as? Int ?? envelope.payload["sizeBytes"] as? Int ?? 0,
+            requestID: envelope.payload["requestId"] as? String ?? "",
+            pending: envelope.payload["pending"] as? Bool ?? false
+        )
     }
 }
 
@@ -162,9 +446,20 @@ extension BrowserViewController: UITextFieldDelegate {
 }
 
 extension BrowserViewController: WKNavigationDelegate {
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        if webView === pageView {
+            NetexMetrics.mark("wk-did-start", metadata: ["url": webView.url?.absoluteString ?? ""])
+        }
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        syncAddress(webView.url)
-        panelRenderer.refreshSource()
+        if webView === pageView {
+            syncAddress(webView.url)
+            panelRenderer.refreshSource()
+            NetexMetrics.mark("wk-did-finish", metadata: ["url": webView.url?.absoluteString ?? ""])
+        } else if webView === threePanelView {
+            NetexMetrics.mark("three-panel-ready")
+        }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -183,60 +478,8 @@ extension BrowserViewController: WKUIDelegate {
 
 extension BrowserViewController: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        switch message.name {
-        case "network":
-            handleNetwork(message.body)
-        case "panel":
-            handlePanel(message.body)
-        default:
-            handleConsole(message.body)
-        }
-    }
-
-    private func handleConsole(_ body: Any) {
-        guard let object = JSONBridge.parseObject(body) else { return }
-        let type = object["type"] as? String
-        guard type == "console-entry" || object["level"] != nil else { return }
-        let entry = ConsoleEntry(
-            level: object["level"] as? String ?? "log",
-            segments: object["segments"] as? [[String: Any]] ?? [["kind": "primitive", "text": object["message"] as? String ?? ""]],
-            source: object["sourceId"] as? String ?? "",
-            line: object["line"] as? Int ?? object["lineNumber"] as? Int ?? 0
-        )
-        panelRenderer.appendConsole(entry)
-    }
-
-    private func handleNetwork(_ body: Any) {
-        guard let object = JSONBridge.parseObject(body) else { return }
-        let entry = NetworkEntry(
-            method: object["method"] as? String ?? "GET",
-            url: object["url"] as? String ?? "",
-            status: object["status"] as? Int ?? 0,
-            body: object["body"] as? String ?? "",
-            contentType: object["contentType"] as? String ?? "",
-            durationMs: object["durationMs"] as? Int ?? 0,
-            size: object["size"] as? Int ?? object["sizeBytes"] as? Int ?? 0,
-            requestID: object["requestId"] as? String ?? "",
-            pending: object["pending"] as? Bool ?? false
-        )
-        panelRenderer.appendNetwork(entry, pageURL: currentPageURL)
-    }
-
-    private func handlePanel(_ body: Any) {
-        guard
-            let object = JSONBridge.parseObject(body),
-            object["type"] as? String == "eval",
-            let id = object["id"] as? String,
-            let source = object["source"] as? String
-        else { return }
-
-        pageView.evaluateJavaScript(source) { [weak self] value, error in
-            let result: [Any] = {
-                if let error { return [false, error.localizedDescription] }
-                if let value { return [true, String(describing: value)] }
-                return [true, "undefined"]
-            }()
-            self?.panelRenderer.deliverEvalResult(id: id, resultJSON: JSONBridge.jsonString(result))
-        }
+        let fallback: BridgeEnvelopeType? = message.name == "panel" ? .panelEval : nil
+        guard let envelope = BridgeEnvelope(message.body, fallbackType: fallback, fallbackSource: message.name) else { return }
+        route(envelope, from: message.name)
     }
 }

@@ -7,24 +7,36 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0797F5507C0EA477FF0A0985 /* chrome-shim-page.js in Resources */ = {isa = PBXBuildFile; fileRef = F5C33F5BFFF5C7B0073739BD /* chrome-shim-page.js */; };
-		14A09D71172402C0238EB45D /* panel.js in Resources */ = {isa = PBXBuildFile; fileRef = 7E79E5F450AACBDE8E3380B9 /* panel.js */; };
+		1160D0AE04475AA32AE85F54 /* MessageBatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FC5DC0E8DD1A37C6E67F4C7 /* MessageBatcher.swift */; };
 		1BB373EA7D360EFE5782E07B /* NetexURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714709F695BAB34053A7027B /* NetexURLTests.swift */; };
+		33607481D6E1562D4B1C0DA3 /* BridgeEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B80174AF5F745AC6DCF3D7 /* BridgeEnvelope.swift */; };
 		365E8625BBBA69BA5E3362AE /* NetexIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */; };
+		3C137799FBA6EA7AEA25CB76 /* BridgeEnvelopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5630A8724AA70C4392E0B69D /* BridgeEnvelopeTests.swift */; };
 		3D5304513498BCA91A90B07F /* AssetLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79D17F866DABF428BB51D58 /* AssetLoader.swift */; };
-		8E9292F225E6760F2BC378E2 /* console-shim.js in Resources */ = {isa = PBXBuildFile; fileRef = 268AF2AA926BCEE3505AF91C /* console-shim.js */; };
-		9A060A68C1114ADAFC4F01CC /* orientation-shim.js in Resources */ = {isa = PBXBuildFile; fileRef = 05E77332DB330539A3E0FF80 /* orientation-shim.js */; };
+		44657EF6003AF863B50978C7 /* NetexIOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 880CEA4BB724C14B9AD3232F /* NetexIOSUITests.swift */; };
+		449500022EECC9E02E85F425 /* MessageBatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD18BC9B751C6D892E2C52FF /* MessageBatcherTests.swift */; };
+		5CC8445CD71E09BE18797DFC /* AssetAndShimTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22E670EB6309C3583A16594F /* AssetAndShimTests.swift */; };
+		893D6C1D8D7AAE0C9A450A38 /* ExtensionRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C1C2C8DE65A8B6E1D97436 /* ExtensionRouterTests.swift */; };
+		99B95527F86764F7ECD7E454 /* ExtensionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076711068497F696AD8DD970 /* ExtensionRouter.swift */; };
 		9B17C02D2880FE765DF1A657 /* PanelMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 368F07F270F3F6460936F6F1 /* PanelMessage.swift */; };
-		A861EF2BA86526C3931919E3 /* chrome-shim-panel.js in Resources */ = {isa = PBXBuildFile; fileRef = 913DDC3420953E06BDD394C9 /* chrome-shim-panel.js */; };
-		B4015CF425F61FBDC2EAF42F /* network-shim.js in Resources */ = {isa = PBXBuildFile; fileRef = D29FB8DF2F472C39FF5FDD12 /* network-shim.js */; };
+		AFB62E66F6735FCFAF45E065 /* NetexMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE4BB3E59C92D5BE9D429CB0 /* NetexMetrics.swift */; };
 		B74943E5E4EE5A12649259BC /* PanelRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCCE39EF3153BD9390D32C0 /* PanelRenderer.swift */; };
+		CD19D6F01D1775A2D868F133 /* NetexShimMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69B8EF8CDB6EFDA3BA539B8E /* NetexShimMode.swift */; };
 		CDB34F19A752DFE7F222E66A /* NetexURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = F738148F8259223E6C560950 /* NetexURL.swift */; };
 		D070A04854259CD8632A28E3 /* BrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 864478E2350441265FC7BBE4 /* BrowserView.swift */; };
+		DB40245F8C94B23BC102C05E /* NetexAssets in Resources */ = {isa = PBXBuildFile; fileRef = 86E78880DE63A53B7C270634 /* NetexAssets */; };
 		E0DF28CC67A789E5A2C4932D /* BrowserViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BA9A8FD4DB1703A6854E5 /* BrowserViewController.swift */; };
-		E8DA1F6A7A2AA37E004D63D2 /* panel-shell.html in Resources */ = {isa = PBXBuildFile; fileRef = 99B260F8CB06C5ACD97073A4 /* panel-shell.html */; };
+		EFD9E8FE3D59F8512576BEA4 /* NetexAssetSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2374503D6B1805B821552106 /* NetexAssetSchemeHandler.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		B3993F5D2DAFBA1C1A240611 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8BBFF5E15F6CEEEF4A09739B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D8F6BC58F50AAC6F79A55F19;
+			remoteInfo = NetexIOS;
+		};
 		BFFCAB9C7ABA1D574D68BB7E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 8BBFF5E15F6CEEEF4A09739B /* Project object */;
@@ -35,22 +47,28 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		05E77332DB330539A3E0FF80 /* orientation-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "orientation-shim.js"; sourceTree = "<group>"; };
-		268AF2AA926BCEE3505AF91C /* console-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "console-shim.js"; sourceTree = "<group>"; };
+		02B80174AF5F745AC6DCF3D7 /* BridgeEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeEnvelope.swift; sourceTree = "<group>"; };
+		076711068497F696AD8DD970 /* ExtensionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionRouter.swift; sourceTree = "<group>"; };
+		22E670EB6309C3583A16594F /* AssetAndShimTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetAndShimTests.swift; sourceTree = "<group>"; };
+		2374503D6B1805B821552106 /* NetexAssetSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexAssetSchemeHandler.swift; sourceTree = "<group>"; };
 		368F07F270F3F6460936F6F1 /* PanelMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelMessage.swift; sourceTree = "<group>"; };
 		3DDAE4466FA69ADB774C1BE3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3FD85DF22A49067B9699D9EC /* NetexIOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NetexIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexIOSApp.swift; sourceTree = "<group>"; };
+		4FC5DC0E8DD1A37C6E67F4C7 /* MessageBatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBatcher.swift; sourceTree = "<group>"; };
+		5630A8724AA70C4392E0B69D /* BridgeEnvelopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeEnvelopeTests.swift; sourceTree = "<group>"; };
+		69B8EF8CDB6EFDA3BA539B8E /* NetexShimMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexShimMode.swift; sourceTree = "<group>"; };
 		714709F695BAB34053A7027B /* NetexURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexURLTests.swift; sourceTree = "<group>"; };
-		7E79E5F450AACBDE8E3380B9 /* panel.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = panel.js; sourceTree = "<group>"; };
 		864478E2350441265FC7BBE4 /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserView.swift; sourceTree = "<group>"; };
-		913DDC3420953E06BDD394C9 /* chrome-shim-panel.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "chrome-shim-panel.js"; sourceTree = "<group>"; };
-		99B260F8CB06C5ACD97073A4 /* panel-shell.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "panel-shell.html"; sourceTree = "<group>"; };
+		86E78880DE63A53B7C270634 /* NetexAssets */ = {isa = PBXFileReference; lastKnownFileType = folder; name = NetexAssets; path = Resources/NetexAssets; sourceTree = SOURCE_ROOT; };
+		880CEA4BB724C14B9AD3232F /* NetexIOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexIOSUITests.swift; sourceTree = "<group>"; };
+		96C1C2C8DE65A8B6E1D97436 /* ExtensionRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionRouterTests.swift; sourceTree = "<group>"; };
 		9DE0554C827AC764EDF26EDD /* NetexIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NetexIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D29FB8DF2F472C39FF5FDD12 /* network-shim.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "network-shim.js"; sourceTree = "<group>"; };
+		CE4BB3E59C92D5BE9D429CB0 /* NetexMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexMetrics.swift; sourceTree = "<group>"; };
+		DD18BC9B751C6D892E2C52FF /* MessageBatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBatcherTests.swift; sourceTree = "<group>"; };
 		E79D17F866DABF428BB51D58 /* AssetLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLoader.swift; sourceTree = "<group>"; };
 		E86F755AC0F8A70DF83848D7 /* NetexIOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NetexIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE8BA9A8FD4DB1703A6854E5 /* BrowserViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewController.swift; sourceTree = "<group>"; };
-		F5C33F5BFFF5C7B0073739BD /* chrome-shim-page.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "chrome-shim-page.js"; sourceTree = "<group>"; };
 		F738148F8259223E6C560950 /* NetexURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetexURL.swift; sourceTree = "<group>"; };
 		FBCCE39EF3153BD9390D32C0 /* PanelRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelRenderer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -60,10 +78,16 @@
 			isa = PBXGroup;
 			children = (
 				E79D17F866DABF428BB51D58 /* AssetLoader.swift */,
+				02B80174AF5F745AC6DCF3D7 /* BridgeEnvelope.swift */,
 				864478E2350441265FC7BBE4 /* BrowserView.swift */,
 				EE8BA9A8FD4DB1703A6854E5 /* BrowserViewController.swift */,
+				076711068497F696AD8DD970 /* ExtensionRouter.swift */,
 				3DDAE4466FA69ADB774C1BE3 /* Info.plist */,
+				4FC5DC0E8DD1A37C6E67F4C7 /* MessageBatcher.swift */,
+				2374503D6B1805B821552106 /* NetexAssetSchemeHandler.swift */,
 				40D257071BAF5280BA4F9B71 /* NetexIOSApp.swift */,
+				CE4BB3E59C92D5BE9D429CB0 /* NetexMetrics.swift */,
+				69B8EF8CDB6EFDA3BA539B8E /* NetexShimMode.swift */,
 				F738148F8259223E6C560950 /* NetexURL.swift */,
 				368F07F270F3F6460936F6F1 /* PanelMessage.swift */,
 				FBCCE39EF3153BD9390D32C0 /* PanelRenderer.swift */,
@@ -75,18 +99,23 @@
 		2F1B9D0F4FCBDCE25EFCCB44 /* NetexIOSTests */ = {
 			isa = PBXGroup;
 			children = (
+				22E670EB6309C3583A16594F /* AssetAndShimTests.swift */,
+				5630A8724AA70C4392E0B69D /* BridgeEnvelopeTests.swift */,
+				96C1C2C8DE65A8B6E1D97436 /* ExtensionRouterTests.swift */,
+				DD18BC9B751C6D892E2C52FF /* MessageBatcherTests.swift */,
 				714709F695BAB34053A7027B /* NetexURLTests.swift */,
 			);
 			name = NetexIOSTests;
 			path = Tests/NetexIOSTests;
 			sourceTree = "<group>";
 		};
-		3BDF250D244D2B33AD529274 /* Resources */ = {
+		3700146AF8B404486DFF57C8 /* NetexIOSUITests */ = {
 			isa = PBXGroup;
 			children = (
-				8970299956E62FB7EFF46F4C /* NetexAssets */,
+				880CEA4BB724C14B9AD3232F /* NetexIOSUITests.swift */,
 			);
-			path = Resources;
+			name = NetexIOSUITests;
+			path = Tests/NetexIOSUITests;
 			sourceTree = "<group>";
 		};
 		65864E4550065DB34E40F58E /* Products */ = {
@@ -94,30 +123,18 @@
 			children = (
 				9DE0554C827AC764EDF26EDD /* NetexIOS.app */,
 				E86F755AC0F8A70DF83848D7 /* NetexIOSTests.xctest */,
+				3FD85DF22A49067B9699D9EC /* NetexIOSUITests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		8970299956E62FB7EFF46F4C /* NetexAssets */ = {
-			isa = PBXGroup;
-			children = (
-				F5C33F5BFFF5C7B0073739BD /* chrome-shim-page.js */,
-				913DDC3420953E06BDD394C9 /* chrome-shim-panel.js */,
-				268AF2AA926BCEE3505AF91C /* console-shim.js */,
-				D29FB8DF2F472C39FF5FDD12 /* network-shim.js */,
-				05E77332DB330539A3E0FF80 /* orientation-shim.js */,
-				99B260F8CB06C5ACD97073A4 /* panel-shell.html */,
-				7E79E5F450AACBDE8E3380B9 /* panel.js */,
-			);
-			path = NetexAssets;
 			sourceTree = "<group>";
 		};
 		DB4A9B286A090A170360A746 = {
 			isa = PBXGroup;
 			children = (
+				86E78880DE63A53B7C270634 /* NetexAssets */,
 				0A1528E1DACDF17D872F36FD /* NetexIOS */,
 				2F1B9D0F4FCBDCE25EFCCB44 /* NetexIOSTests */,
-				3BDF250D244D2B33AD529274 /* Resources */,
+				3700146AF8B404486DFF57C8 /* NetexIOSUITests */,
 				65864E4550065DB34E40F58E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -161,6 +178,24 @@
 			productReference = 9DE0554C827AC764EDF26EDD /* NetexIOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		FB4F576759CD0E6C5903E431 /* NetexIOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46AA7654D7CB4F2EB754A1D2 /* Build configuration list for PBXNativeTarget "NetexIOSUITests" */;
+			buildPhases = (
+				E147574437D637E1258D4C47 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D49386347B2E17B256BE241F /* PBXTargetDependency */,
+			);
+			name = NetexIOSUITests;
+			packageProductDependencies = (
+			);
+			productName = NetexIOSUITests;
+			productReference = 3FD85DF22A49067B9699D9EC /* NetexIOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -175,6 +210,10 @@
 					};
 					D8F6BC58F50AAC6F79A55F19 = {
 						ProvisioningStyle = Automatic;
+					};
+					FB4F576759CD0E6C5903E431 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = D8F6BC58F50AAC6F79A55F19;
 					};
 				};
 			};
@@ -194,6 +233,7 @@
 			targets = (
 				D8F6BC58F50AAC6F79A55F19 /* NetexIOS */,
 				187309BBA654A44837CBF0DD /* NetexIOSTests */,
+				FB4F576759CD0E6C5903E431 /* NetexIOSUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -203,13 +243,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0797F5507C0EA477FF0A0985 /* chrome-shim-page.js in Resources */,
-				A861EF2BA86526C3931919E3 /* chrome-shim-panel.js in Resources */,
-				8E9292F225E6760F2BC378E2 /* console-shim.js in Resources */,
-				B4015CF425F61FBDC2EAF42F /* network-shim.js in Resources */,
-				9A060A68C1114ADAFC4F01CC /* orientation-shim.js in Resources */,
-				E8DA1F6A7A2AA37E004D63D2 /* panel-shell.html in Resources */,
-				14A09D71172402C0238EB45D /* panel.js in Resources */,
+				DB40245F8C94B23BC102C05E /* NetexAssets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -220,6 +254,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5CC8445CD71E09BE18797DFC /* AssetAndShimTests.swift in Sources */,
+				3C137799FBA6EA7AEA25CB76 /* BridgeEnvelopeTests.swift in Sources */,
+				893D6C1D8D7AAE0C9A450A38 /* ExtensionRouterTests.swift in Sources */,
+				449500022EECC9E02E85F425 /* MessageBatcherTests.swift in Sources */,
 				1BB373EA7D360EFE5782E07B /* NetexURLTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -229,12 +267,26 @@
 			buildActionMask = 2147483647;
 			files = (
 				3D5304513498BCA91A90B07F /* AssetLoader.swift in Sources */,
+				33607481D6E1562D4B1C0DA3 /* BridgeEnvelope.swift in Sources */,
 				D070A04854259CD8632A28E3 /* BrowserView.swift in Sources */,
 				E0DF28CC67A789E5A2C4932D /* BrowserViewController.swift in Sources */,
+				99B95527F86764F7ECD7E454 /* ExtensionRouter.swift in Sources */,
+				1160D0AE04475AA32AE85F54 /* MessageBatcher.swift in Sources */,
+				EFD9E8FE3D59F8512576BEA4 /* NetexAssetSchemeHandler.swift in Sources */,
 				365E8625BBBA69BA5E3362AE /* NetexIOSApp.swift in Sources */,
+				AFB62E66F6735FCFAF45E065 /* NetexMetrics.swift in Sources */,
+				CD19D6F01D1775A2D868F133 /* NetexShimMode.swift in Sources */,
 				CDB34F19A752DFE7F222E66A /* NetexURL.swift in Sources */,
 				9B17C02D2880FE765DF1A657 /* PanelMessage.swift in Sources */,
 				B74943E5E4EE5A12649259BC /* PanelRenderer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E147574437D637E1258D4C47 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				44657EF6003AF863B50978C7 /* NetexIOSUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,6 +297,11 @@
 			isa = PBXTargetDependency;
 			target = D8F6BC58F50AAC6F79A55F19 /* NetexIOS */;
 			targetProxy = BFFCAB9C7ABA1D574D68BB7E /* PBXContainerItemProxy */;
+		};
+		D49386347B2E17B256BE241F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D8F6BC58F50AAC6F79A55F19 /* NetexIOS */;
+			targetProxy = B3993F5D2DAFBA1C1A240611 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -321,6 +378,38 @@
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
+		};
+		0B2C10E0A26D82E2C831F849 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mrdoob.netex.ios.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NetexIOS;
+			};
+			name = Release;
+		};
+		17C4DECF640A9348D4D42FF6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.mrdoob.netex.ios.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NetexIOS;
+			};
+			name = Debug;
 		};
 		6047519EE528A4DA456C1FD6 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -442,6 +531,15 @@
 			buildConfigurations = (
 				0943FB9B48F2918D7CBAA6AE /* Debug */,
 				B3B45EC9BD204254C6C64C06 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		46AA7654D7CB4F2EB754A1D2 /* Build configuration list for PBXNativeTarget "NetexIOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				17C4DECF640A9348D4D42FF6 /* Debug */,
+				0B2C10E0A26D82E2C831F849 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

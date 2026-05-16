@@ -10,6 +10,10 @@
   var MAX_BODY = 256 * 1024;        // 256 KB
   var MAX_BINARY = 4 * 1024 * 1024; // 4 MB
   var MAX_BLOBS = 64;               // FIFO cap so long-lived pages don't pin memory
+  var MAX_BATCH = 32;
+  var BATCH_DELAY = 50;
+  var pendingRecords = [];
+  var pendingTimer = null;
 
   if (!ns.blobs) ns.blobs = new Map();
 
@@ -27,12 +31,40 @@
     return parseInt(headerValue || '0', 10) || 0;
   }
 
-  function post(record) {
+  function postDirect(record) {
     try {
       if (typeof AndroidNetwork !== 'undefined' && AndroidNetwork.postMessage) {
         AndroidNetwork.postMessage(JSON.stringify(record));
       }
     } catch (e) { /* ignore */ }
+  }
+
+  function flushRecords() {
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      pendingTimer = null;
+    }
+    if (!pendingRecords.length) return;
+    var records = pendingRecords.splice(0, pendingRecords.length);
+    postDirect({
+      type: 'network.batch',
+      source: 'page',
+      timestamp: Date.now(),
+      payload: { entries: records }
+    });
+  }
+
+  function post(record) {
+    if (record && record.type === 'blob-response') {
+      postDirect(record);
+      return;
+    }
+    pendingRecords.push(record);
+    if (pendingRecords.length >= MAX_BATCH) {
+      flushRecords();
+      return;
+    }
+    if (!pendingTimer) pendingTimer = setTimeout(flushRecords, BATCH_DELAY);
   }
 
   function newRequestId() {

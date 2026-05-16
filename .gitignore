@@ -11,3 +11,5 @@ captures/
 *.apk
 *.aab
 *.ap_
+*.xcuserstate
+*.xcuserdatad/

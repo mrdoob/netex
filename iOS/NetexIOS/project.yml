@@ -13,7 +13,9 @@ targets:
     platform: iOS
     sources:
       - path: Sources/NetexIOS
-      - path: Resources
+      - path: Resources/NetexAssets
+        type: folder
+        buildPhase: resources
     info:
       path: Sources/NetexIOS/Info.plist
       properties:
@@ -42,3 +44,13 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mrdoob.netex.ios.tests
+  NetexIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/NetexIOSUITests
+    dependencies:
+      - target: NetexIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mrdoob.netex.ios.uitests

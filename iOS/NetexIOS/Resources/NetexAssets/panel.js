@@ -1,6 +1,40 @@
 (function () {
   var pendingBlobs = new Map();
-  var HLJS_BASE = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles';
+  var ASSET_BASE = 'netex-assets://bundle/NetexAssets/vendor/';
+  var CSS_BASE = ASSET_BASE.replace(/\/$/, '');
+  var HLJS_BASE = CSS_BASE;
+  var loadedScripts = new Map();
+
+  function loadScript(url, attrs) {
+    if (loadedScripts.has(url)) return loadedScripts.get(url);
+    var promise = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = url;
+      if (attrs) Object.keys(attrs).forEach(function (k) { s.setAttribute(k, attrs[k]); });
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    loadedScripts.set(url, promise);
+    return promise;
+  }
+
+  function ensureHighlight() {
+    if (window.hljs) return Promise.resolve();
+    return loadScript(ASSET_BASE + 'highlight.min.js');
+  }
+
+  function ensureBeautifier() {
+    if (typeof html_beautify === 'function') return Promise.resolve();
+    return loadScript(ASSET_BASE + 'beautify.min.js')
+      .then(function () { return loadScript(ASSET_BASE + 'beautify-css.min.js'); })
+      .then(function () { return loadScript(ASSET_BASE + 'beautify-html.min.js'); });
+  }
+
+  function ensureModelViewer() {
+    if (customElements.get('model-viewer')) return Promise.resolve();
+    return loadScript(ASSET_BASE + 'model-viewer.min.js', { type: 'module' }).catch(function () {});
+  }
 
   function setTheme(opts) {
     document.documentElement.style.setProperty('--fg', opts.fg);
@@ -34,7 +68,14 @@
     }
     newCode.textContent = formatted;
     oldCode.parentNode.replaceChild(newCode, oldCode);
-    try { hljs.highlightElement(newCode); } catch (e) {}
+    ensureBeautifier().then(function () {
+      if (typeof html_beautify === 'function') {
+        try { newCode.textContent = html_beautify(html, { indent_size: 2, indent_with_tabs: false, preserve_newlines: true, max_preserve_newlines: 1, wrap_line_length: 0 }); } catch (e) {}
+      }
+      return ensureHighlight();
+    }).then(function () {
+      try { hljs.highlightElement(newCode); } catch (e) {}
+    }).catch(function () {});
   }
 
   var totalBytes = 0;
@@ -151,6 +192,7 @@
       mv.setAttribute('auto-rotate', '');
       mv.setAttribute('touch-action', 'pan-y');
       if (!r.requestId) mv.setAttribute('src', r.url);
+      ensureModelViewer();
       return mv;
     }
     return null;
@@ -169,7 +211,9 @@
       code.textContent = raw;
     }
     pre.appendChild(code);
-    try { hljs.highlightElement(code); } catch (e) {}
+    ensureHighlight().then(function () {
+      try { hljs.highlightElement(code); } catch (e) {}
+    }).catch(function () {});
     return pre;
   }
 

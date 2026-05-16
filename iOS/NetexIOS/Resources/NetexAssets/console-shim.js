@@ -116,6 +116,36 @@
   };
 
   var FMT_RE = /%[csdifoO]/g;
+  var pendingEntries = [];
+  var pendingTimer = null;
+  var MAX_BATCH = 32;
+  var BATCH_DELAY = 50;
+
+  function flushEntries() {
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      pendingTimer = null;
+    }
+    if (!pendingEntries.length) return;
+    var entries = pendingEntries.splice(0, pendingEntries.length);
+    try {
+      AndroidExtension.postMessage(JSON.stringify({
+        type: 'console.batch',
+        source: 'page',
+        timestamp: Date.now(),
+        payload: { entries: entries }
+      }));
+    } catch (e) { /* bridge re-attaches on next load */ }
+  }
+
+  function enqueueEntry(entry) {
+    pendingEntries.push(entry);
+    if (pendingEntries.length >= MAX_BATCH) {
+      flushEntries();
+      return;
+    }
+    if (!pendingTimer) pendingTimer = setTimeout(flushEntries, BATCH_DELAY);
+  }
 
   // Returns null if there's no %c style directive — caller should fall through to the
   // plain onConsoleMessage path (which preserves source-line info). Otherwise returns
@@ -158,9 +188,7 @@
   }
 
   function postEntry(level, segments) {
-    try {
-      AndroidExtension.postMessage(JSON.stringify({ type: 'console.entry', level: level, segments: segments }));
-    } catch (e) { /* bridge re-attaches on next load */ }
+    enqueueEntry({ level: level, segments: segments });
   }
 
   ['log', 'info', 'warn', 'error', 'debug'].forEach(function (method) {
