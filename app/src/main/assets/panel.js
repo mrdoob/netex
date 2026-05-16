@@ -11,6 +11,7 @@
   }
 
   function setActiveTab(tab) {
+    document.getElementById('console-tab').classList.toggle('active', tab === 'console');
     document.getElementById('source-tab').classList.toggle('active', tab === 'source');
     document.getElementById('network-tab').classList.toggle('active', tab === 'network');
   }
@@ -63,8 +64,7 @@
     updateTotals();
   }
 
-  function appendNetworkRow(payload) {
-    var r = typeof payload === 'string' ? JSON.parse(payload) : payload;
+  function appendNetworkRow(r) {
     var container = document.getElementById('network-tab');
     var det = r.requestId
       ? container.querySelector('details.req[data-rid="' + r.requestId + '"]')
@@ -213,12 +213,167 @@
     pending.push(cb);
   }
 
+  var MAX_CONSOLE_ENTRIES = 1000;
+  var MAX_HISTORY = 100;
+  var pendingEvals = new Set();
+  var evalSeq = 0;
+  var history = [];
+  var historyCursor = -1;
+  var draft = '';
+  // Track via scroll-event rather than reading scrollTop on every append; per-log
+  // layout flush gets expensive when chatty pages spam console.log.
+  var consoleScrolledUp = false;
+
+  var GLYPH = { input: '❯', result: '❮', result_error: '❮', warn: '⚠', error: '✕' };
+
+  // CSS allowlist for %c styled segments — anything not on this list is dropped so a
+  // page can't escape the chip with e.g. position:fixed or background:url(...).
+  var SAFE_CSS = new Set([
+    'color', 'background', 'background-color',
+    'font', 'font-size', 'font-weight', 'font-family', 'font-style',
+    'padding', 'padding-left', 'padding-right', 'padding-top', 'padding-bottom',
+    'margin', 'margin-left', 'margin-right', 'margin-top', 'margin-bottom',
+    'border', 'border-radius', 'border-color', 'border-style', 'border-width',
+    'text-decoration', 'text-shadow', 'text-transform',
+    'line-height', 'letter-spacing', 'word-spacing'
+  ]);
+
+  function sanitizeStyle(s) {
+    var parts = String(s).split(';');
+    var out = [];
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i].trim();
+      if (!p) continue;
+      var colon = p.indexOf(':');
+      if (colon === -1) continue;
+      var key = p.slice(0, colon).trim().toLowerCase();
+      var val = p.slice(colon + 1).trim();
+      if (/url\(|expression\(|@import|javascript:/i.test(val)) continue;
+      if (SAFE_CSS.has(key)) out.push(key + ':' + val);
+    }
+    return out.join(';');
+  }
+
+  function appendConsoleEntry(r) {
+    var entries = document.getElementById('consoleEntries');
+    var div = document.createElement('div');
+    div.className = 'entry ' + (r.level || 'log');
+
+    var glyph = document.createElement('span');
+    glyph.className = 'glyph';
+    glyph.textContent = GLYPH[r.level] || '';
+    div.appendChild(glyph);
+
+    var msg = document.createElement('span');
+    msg.className = 'msg';
+    if (Array.isArray(r.segments)) {
+      r.segments.forEach(function (s) {
+        var seg = document.createElement('span');
+        seg.textContent = s.text || '';
+        if (s.style) seg.style.cssText = sanitizeStyle(s.style);
+        msg.appendChild(seg);
+      });
+    } else {
+      msg.textContent = r.message || '';
+    }
+    div.appendChild(msg);
+
+    if (r.sourceId) {
+      var src = document.createElement('span');
+      src.className = 'src';
+      src.textContent = shortenSource(r.sourceId) + (r.line ? ':' + r.line : '');
+      div.appendChild(src);
+    }
+
+    entries.appendChild(div);
+    while (entries.childElementCount > MAX_CONSOLE_ENTRIES) entries.firstElementChild.remove();
+    if (!consoleScrolledUp) entries.scrollTop = entries.scrollHeight;
+  }
+
+  function shortenSource(src) {
+    var slash = src.lastIndexOf('/');
+    return slash === -1 ? src : src.slice(slash + 1);
+  }
+
+  function clearConsole() {
+    document.getElementById('consoleEntries').replaceChildren();
+  }
+
+  function submitEval(source) {
+    if (!source) return;
+    history.push(source);
+    if (history.length > MAX_HISTORY) history.shift();
+    historyCursor = -1;
+    draft = '';
+    appendConsoleEntry({ level: 'input', message: source });
+    var evalId = 'e-' + (++evalSeq);
+    pendingEvals.add(evalId);
+    try {
+      AndroidPanel.postMessage(JSON.stringify({ type: 'eval', evalId: evalId, source: source }));
+    } catch (e) {
+      appendConsoleEntry({ level: 'result_error', message: String(e) });
+      pendingEvals.delete(evalId);
+    }
+  }
+
+  function deliverEvalResult(evalId, resultJson) {
+    if (!pendingEvals.delete(evalId)) return;
+    var parsed;
+    try { parsed = JSON.parse(resultJson); } catch (e) { parsed = [false, 'unparseable result: ' + resultJson]; }
+    if (!Array.isArray(parsed)) parsed = [false, 'unexpected result shape'];
+    appendConsoleEntry({ level: parsed[0] ? 'result' : 'result_error', message: String(parsed[1]) });
+  }
+
+  function wireConsoleScroll() {
+    var entries = document.getElementById('consoleEntries');
+    if (!entries) return;
+    entries.addEventListener('scroll', function () {
+      consoleScrolledUp = entries.scrollTop + entries.clientHeight < entries.scrollHeight - 4;
+    });
+  }
+  wireConsoleScroll();
+
+  function wireConsolePrompt() {
+    var form = document.getElementById('consolePrompt');
+    var input = document.getElementById('consoleInput');
+    if (!form || !input) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var src = input.value;
+      input.value = '';
+      submitEval(src);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowUp') {
+        if (history.length === 0) return;
+        if (historyCursor === -1) draft = input.value;
+        historyCursor = historyCursor === -1 ? history.length - 1 : Math.max(0, historyCursor - 1);
+        input.value = history[historyCursor];
+        e.preventDefault();
+      } else if (e.key === 'ArrowDown') {
+        if (historyCursor === -1) return;
+        historyCursor = historyCursor + 1;
+        if (historyCursor >= history.length) {
+          historyCursor = -1;
+          input.value = draft;
+        } else {
+          input.value = history[historyCursor];
+        }
+        e.preventDefault();
+      }
+    });
+  }
+  wireConsolePrompt();
+
   window.__panel = {
     setTheme: setTheme,
     setActiveTab: setActiveTab,
     setSource: setSource,
     clearNetwork: clearNetwork,
     appendNetworkRow: appendNetworkRow,
-    deliverBlob: deliverBlob
+    deliverBlob: deliverBlob,
+    appendConsoleEntry: appendConsoleEntry,
+    clearConsole: clearConsole,
+    deliverEvalResult: deliverEvalResult
   };
 })();

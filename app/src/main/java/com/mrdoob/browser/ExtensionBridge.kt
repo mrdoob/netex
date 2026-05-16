@@ -7,6 +7,7 @@ private const val TAG = "ExtensionBridge"
 class ExtensionBridge(
     private val router: ExtensionRouter,
     private val onOrientationLock: (String?) -> Unit,
+    private val onConsoleEntry: (level: String, segmentsJson: String) -> Unit,
 ) : JsonMessageBridge(TAG) {
 
     companion object {
@@ -23,6 +24,10 @@ class ExtensionBridge(
             EnvelopeType.PORT_DISCONNECT -> router.onPagePortDisconnect(obj)
             EnvelopeType.ORIENTATION_LOCK -> onOrientationLock(obj.optString("orientation"))
             EnvelopeType.ORIENTATION_UNLOCK -> onOrientationLock(null)
+            EnvelopeType.CONSOLE_ENTRY -> onConsoleEntry(
+                obj.optString("level"),
+                obj.optJSONArray("segments")?.toString() ?: "[]"
+            )
         }
     }
 }

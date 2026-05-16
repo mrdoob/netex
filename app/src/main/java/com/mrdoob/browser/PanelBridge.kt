@@ -5,7 +5,8 @@ import org.json.JSONObject
 private const val TAG = "PanelBridge"
 
 class PanelBridge(
-    private val onFetchBlob: (String) -> Unit
+    private val onFetchBlob: (String) -> Unit,
+    private val onEval: (String, String) -> Unit
 ) : JsonMessageBridge(TAG) {
 
     companion object {
@@ -15,6 +16,7 @@ class PanelBridge(
     override fun onMessage(obj: JSONObject) {
         when (obj.optString("type")) {
             "fetch-blob" -> onFetchBlob(obj.optString("requestId"))
+            "eval" -> onEval(obj.optString("evalId"), obj.optString("source"))
         }
     }
 }

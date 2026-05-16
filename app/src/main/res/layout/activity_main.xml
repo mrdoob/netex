@@ -129,10 +129,16 @@
             android:gravity="center">
 
             <TextView
+                android:id="@+id/tabConsole"
+                style="@style/PanelTab"
+                android:text="Console"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
                 android:id="@+id/tabSource"
                 style="@style/PanelTab"
                 android:text="Source"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:id="@+id/tabNetwork"

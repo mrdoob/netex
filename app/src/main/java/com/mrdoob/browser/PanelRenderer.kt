@@ -7,6 +7,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
 
@@ -15,7 +16,7 @@ class PanelRenderer(
     private val panelView: WebView,
     private val mainView: WebView
 ) {
-    enum class Tab { SOURCE, NETWORK, THREEJS }
+    enum class Tab { CONSOLE, SOURCE, NETWORK, THREEJS }
 
     private var shellLoaded = false
     private val pending = ArrayDeque<() -> Unit>()
@@ -41,8 +42,14 @@ class PanelRenderer(
     }
 
     fun setTab(tab: Tab) {
+        // THREEJS is rendered by the separate panel WebView and never reaches this method.
+        val name = when (tab) {
+            Tab.CONSOLE -> "console"
+            Tab.SOURCE -> "source"
+            Tab.NETWORK -> "network"
+            Tab.THREEJS -> return
+        }
         afterShellLoaded {
-            val name = if (tab == Tab.SOURCE) "source" else "network"
             evalPanel("window.__panel.setActiveTab(${q(name)})")
         }
     }
@@ -85,6 +92,30 @@ class PanelRenderer(
     fun deliverBlob(rid: String, dataUrl: String) {
         afterShellLoaded {
             evalPanel("window.__panel.deliverBlob(${q(rid)}, ${q(dataUrl)})")
+        }
+    }
+
+    fun appendConsoleEntry(entry: ConsoleLog.Entry) {
+        val payload = JSONObject().apply {
+            put("level", entry.level.name.lowercase())
+            put("segments", JSONArray(entry.segmentsJson))
+            put("sourceId", entry.sourceId ?: "")
+            put("line", entry.lineNumber)
+        }.toString()
+        afterShellLoaded {
+            evalPanel("window.__panel.appendConsoleEntry($payload)")
+        }
+    }
+
+    fun clearConsole() {
+        afterShellLoaded {
+            evalPanel("window.__panel.clearConsole()")
+        }
+    }
+
+    fun deliverEvalResult(evalId: String, resultJson: String) {
+        afterShellLoaded {
+            evalPanel("window.__panel.deliverEvalResult(${q(evalId)}, ${q(resultJson)})")
         }
     }
 

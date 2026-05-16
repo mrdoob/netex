@@ -11,8 +11,24 @@
 }
 body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--fg); }
 
-#source-tab, #network-tab { display: none; }
+#console-tab, #source-tab, #network-tab { display: none; }
 #source-tab.active, #network-tab.active { display: block; }
+#console-tab.active { display: flex; flex-direction: column; position: absolute; inset: 0; }
+
+#console-tab .entries { flex:1; overflow-y:auto; padding:6px 12px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; line-height:1.4; }
+#console-tab .entry { display:flex; flex-wrap:wrap; gap:2px 8px; padding:4px 0; border-bottom:1px solid rgba(127,127,127,0.2); }
+#console-tab .entry .glyph { flex-shrink:0; width:14px; text-align:center; opacity:0.7; line-height:1.4; }
+#console-tab .entry .msg { flex:1; min-width:0; white-space:pre-wrap; word-break:break-word; }
+#console-tab .entry .src { flex:0 0 100%; box-sizing:border-box; padding-left:28px; text-align:right; opacity:0.5; font-size:11px; word-break:break-all; }
+#console-tab .entry.warn .msg, #console-tab .entry.warn .glyph { color:#fbbf24; opacity:1; }
+#console-tab .entry.error .msg, #console-tab .entry.error .glyph,
+#console-tab .entry.result_error .msg, #console-tab .entry.result_error .glyph { color:#f87171; opacity:1; }
+#console-tab .entry.input .glyph, #console-tab .entry.input .msg { color:#93c5fd; }
+#console-tab .entry.result .glyph { color:#93c5fd; }
+
+#console-tab .prompt { display:flex; align-items:center; gap:8px; padding:6px 12px; border-top:1px solid rgba(127,127,127,0.2); background:var(--panel-bg); flex-shrink:0; }
+#console-tab .prompt span { color:#93c5fd; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; line-height:1; }
+#console-tab .prompt input { flex:1; background:transparent; border:none; outline:none; color:inherit; font:12px ui-monospace,SFMono-Regular,Menlo,monospace; padding:2px 0; }
 
 #source-tab pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; }
 code.hljs { background:transparent !important; padding:0 !important; }
@@ -50,7 +66,11 @@ code.hljs { background:transparent !important; padding:0 !important; }
 </style>
 </head>
 <body>
-<div id="source-tab" class="active"><pre><code class="language-html"></code></pre></div>
+<div id="console-tab" class="active">
+  <div class="entries" id="consoleEntries"></div>
+  <form class="prompt" id="consolePrompt"><span>❯</span><input id="consoleInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /></form>
+</div>
+<div id="source-tab"><pre><code class="language-html"></code></pre></div>
 <div id="network-tab"><div class="net-totals" id="netTotals"><span class="method"></span><span class="url" id="netTotalsCount"></span><span class="size" id="netTotalsSize"></span><span class="status"></span></div><p class="empty">No requests captured yet.</p></div>
 <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-css.min.js"></script>

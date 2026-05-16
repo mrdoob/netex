@@ -43,6 +43,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.mrdoob.browser.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 
 private const val TAG = "MainActivity"
@@ -57,10 +58,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var panel: PanelRenderer
 
     private val extensionRouter = ExtensionRouter()
-    private val extensionBridge = ExtensionBridge(extensionRouter) { type -> applyOrientationLock(type) }
+    private val extensionBridge = ExtensionBridge(
+        router = extensionRouter,
+        onOrientationLock = { type -> applyOrientationLock(type) },
+        onConsoleEntry = { level, segmentsJson ->
+            ConsoleLog.add(ConsoleLog.Entry(
+                level = consoleLevelFromName(level),
+                segmentsJson = segmentsJson
+            ))
+        }
+    )
     private val panelExtensionBridge = PanelExtensionBridge(extensionRouter)
     private val networkBridge = NetworkBridge { rid, dataUrl -> panel.deliverBlob(rid, dataUrl) }
-    private val panelBridge = PanelBridge { rid -> fetchBlobFromMain(rid) }
+    private val panelBridge = PanelBridge(
+        onFetchBlob = { rid -> fetchBlobFromMain(rid) },
+        onEval = { evalId, source -> evalInPage(evalId, source) }
+    )
 
     private lateinit var documentStartScript: String
     private var docStartInjectionAvailable: Boolean = false
@@ -71,7 +84,7 @@ class MainActivity : AppCompatActivity() {
 
     private var currentUrl: String = BLANK_URL
     private var currentTitle: String? = null
-    private var currentTab = PanelRenderer.Tab.SOURCE
+    private var currentTab = PanelRenderer.Tab.CONSOLE
     private var sourceDirty = true
 
     private var fullscreenView: View? = null
@@ -108,6 +121,7 @@ class MainActivity : AppCompatActivity() {
         setupThreeJsPanel(this, binding.threePanelView, panelExtensionBridge)
         observeDetectionState()
         observeNetworkLog()
+        observeConsoleLog()
         wireUrlBar()
         wirePanelHeader()
         installBackHandler()
@@ -235,6 +249,7 @@ class MainActivity : AppCompatActivity() {
             override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
                 DetectionStore.reset()
                 NetworkLog.reset()
+                ConsoleLog.reset()
                 extensionRouter.onPageNavigationStarted()
                 setUrlBubbleProgress(0, animate = false)
                 if (!docStartInjectionAvailable) {
@@ -275,9 +290,15 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                if (BuildConfig.DEBUG) {
-                    Log.d("WebViewConsole", "${message.messageLevel()} ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
-                }
+                val segments = JSONArray().put(
+                    JSONObject().put("text", message.message() ?: "").put("style", "")
+                )
+                ConsoleLog.add(ConsoleLog.Entry(
+                    level = consoleLevelOf(message.messageLevel()),
+                    segmentsJson = segments.toString(),
+                    sourceId = message.sourceId()?.takeIf { it.isNotEmpty() },
+                    lineNumber = message.lineNumber()
+                ))
                 return true
             }
 
@@ -390,6 +411,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun observeConsoleLog() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ConsoleLog.events.collect { event ->
+                    when (event) {
+                        is ConsoleLog.Event.Added -> panel.appendConsoleEntry(event.entry)
+                        ConsoleLog.Event.Cleared -> panel.clearConsole()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun consoleLevelOf(level: ConsoleMessage.MessageLevel?): ConsoleLog.Level = when (level) {
+        ConsoleMessage.MessageLevel.WARNING -> ConsoleLog.Level.WARN
+        ConsoleMessage.MessageLevel.ERROR -> ConsoleLog.Level.ERROR
+        ConsoleMessage.MessageLevel.DEBUG -> ConsoleLog.Level.DEBUG
+        else -> ConsoleLog.Level.LOG
+    }
+
+    private fun consoleLevelFromName(name: String): ConsoleLog.Level = when (name.lowercase()) {
+        "warn", "warning" -> ConsoleLog.Level.WARN
+        "error" -> ConsoleLog.Level.ERROR
+        "debug" -> ConsoleLog.Level.DEBUG
+        "info" -> ConsoleLog.Level.INFO
+        else -> ConsoleLog.Level.LOG
+    }
+
     private fun wireUrlBar() {
         binding.urlBar.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
@@ -419,6 +468,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun wirePanelHeader() {
+        binding.tabConsole.setOnClickListener { switchTab(PanelRenderer.Tab.CONSOLE) }
         binding.tabSource.setOnClickListener { switchTab(PanelRenderer.Tab.SOURCE) }
         binding.tabNetwork.setOnClickListener { switchTab(PanelRenderer.Tab.NETWORK) }
         binding.tabThreejs.setOnClickListener { switchTab(PanelRenderer.Tab.THREEJS) }
@@ -446,6 +496,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateTabStyles() {
         val active = binding.root.materialColor(com.google.android.material.R.attr.colorOnSurface)
         val inactive = binding.root.materialColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        binding.tabConsole.setTextColor(if (currentTab == PanelRenderer.Tab.CONSOLE) active else inactive)
         binding.tabSource.setTextColor(if (currentTab == PanelRenderer.Tab.SOURCE) active else inactive)
         binding.tabNetwork.setTextColor(if (currentTab == PanelRenderer.Tab.NETWORK) active else inactive)
         binding.tabThreejs.setTextColor(if (currentTab == PanelRenderer.Tab.THREEJS) active else inactive)
@@ -621,6 +672,15 @@ class MainActivity : AppCompatActivity() {
             "window.__netex && window.__netex.findBlob(${JSONObject.quote(rid)})",
             null
         )
+    }
+
+    private fun evalInPage(evalId: String, source: String) {
+        val js = "(window.__netex && window.__netex.consoleEval) " +
+            "? window.__netex.consoleEval(${JSONObject.quote(source)}) " +
+            ": [false,'console eval not ready']"
+        binding.webView.evaluateJavascript(js) { result ->
+            panel.deliverEvalResult(evalId, result ?: "null")
+        }
     }
 
     private fun parseHexColor(hex: String): Int? = try { Color.parseColor(hex) } catch (_: IllegalArgumentException) { null }
