@@ -31,16 +31,24 @@ class ExtensionRouter {
         // Old queue belongs to the previous bg.js — it'll never see them.
         // panel-side polling will re-issue REQUEST_STATE; INIT replays from cache.
         pendingPanelToPage.clear()
-        livePorts.keys.forEach { dispatchToPanel(committedEnvelope(it)) }
+        broadcastCommittedToPanel()
     }
 
-    fun onPageReady() {
+    fun onPageReady(frameId: Int = 0) {
         pageReady = true
+        // Sub-frame loads (e.g. an iframe swap on threejs.org/examples) never trigger
+        // WebViewClient.onPageStarted, so the panel would otherwise pile up renderers
+        // from each navigated example. Mirror onPageNavigationStarted's reset here.
+        if (frameId != 0) broadcastCommittedToPanel()
         livePorts.forEach { (portId, name) ->
             dispatchToPage(connectEnvelope(portId, name))
             portSetupMessage[portId]?.let { dispatchToPage(it) }
         }
         while (pendingPanelToPage.isNotEmpty()) dispatchToPage(pendingPanelToPage.removeFirst())
+    }
+
+    private fun broadcastCommittedToPanel() {
+        livePorts.keys.forEach { dispatchToPanel(committedEnvelope(it)) }
     }
 
     fun onPagePortMessage(envelope: JSONObject) { dispatchToPanel(envelope.toString()) }

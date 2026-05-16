@@ -223,6 +223,6 @@
   // router can replay port-connects for live panel ports (page-ready).
   Promise.resolve().then(function () {
     bgWebNavCommitted._fire({ tabId: TAB_ID, frameId: 0, url: location.href });
-    postNative({ type: 'page-ready' });
+    postNative({ type: 'page-ready', frameId: window === window.top ? 0 : 1 });
   });
 })();

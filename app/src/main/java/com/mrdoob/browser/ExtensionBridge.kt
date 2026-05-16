@@ -19,7 +19,7 @@ class ExtensionBridge(
             EnvelopeType.ACTION_SET_BADGE_TEXT -> DetectionStore.setBadgeText(obj.optString("text"))
             EnvelopeType.ACTION_SET_BADGE_BACKGROUND_COLOR ->
                 DetectionStore.setBadgeBackgroundColor(obj.optString("color").takeIf { it.isNotEmpty() })
-            EnvelopeType.PAGE_READY -> router.onPageReady()
+            EnvelopeType.PAGE_READY -> router.onPageReady(obj.optInt("frameId", 0))
             EnvelopeType.PORT_MESSAGE -> router.onPagePortMessage(obj)
             EnvelopeType.PORT_DISCONNECT -> router.onPagePortDisconnect(obj)
             EnvelopeType.ORIENTATION_LOCK -> onOrientationLock(obj.optString("orientation"))
