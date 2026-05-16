@@ -39,6 +39,12 @@
 
   var totalBytes = 0;
   var totalCount = 0;
+  // Network rows live in the document's scroll context (unlike Console which has
+  // its own scrollable container). Pin to bottom unless the user scrolled up.
+  var networkScrolledUp = false;
+  window.addEventListener('scroll', function () {
+    networkScrolledUp = (window.scrollY + window.innerHeight) < (document.documentElement.scrollHeight - 4);
+  }, { passive: true });
 
   function updateTotals() {
     var el = document.getElementById('netTotals');
@@ -69,8 +75,9 @@
     var det = r.requestId
       ? container.querySelector('details.req[data-rid="' + r.requestId + '"]')
       : null;
+    var isNew = !det;
 
-    if (!det) {
+    if (isNew) {
       var empty = container.querySelector('.empty');
       if (empty) empty.remove();
       det = document.createElement('details');
@@ -90,6 +97,9 @@
     updateTotals();
 
     renderRow(det, r);
+
+    // Scroll after renderRow so scrollHeight reflects the new row's content.
+    if (isNew && !networkScrolledUp) window.scrollTo(0, document.documentElement.scrollHeight);
   }
 
   function renderRow(det, r) {
