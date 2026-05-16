@@ -9,9 +9,11 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.LayerDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.util.Patterns
@@ -111,6 +113,10 @@ class MainActivity : AppCompatActivity() {
         installBackHandler()
         setupDragHandler()
         updateTabStyles()
+        // Reserve the edge-adjacent chrome buttons from Android's back-gesture region,
+        // otherwise a tap near the screen edge gets swallowed as a back swipe.
+        excludeFromSystemGestures(binding.panelReload)
+        excludeFromSystemGestures(binding.threeLogoButton)
 
         if (savedInstanceState != null) {
             binding.webView.restoreState(savedInstanceState)
@@ -410,7 +416,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.threeLogoButton.setOnClickListener(dismissUrlEditing)
-        binding.settingsButton.setOnClickListener(dismissUrlEditing)
     }
 
     private fun wirePanelHeader() {
@@ -418,6 +423,13 @@ class MainActivity : AppCompatActivity() {
         binding.tabNetwork.setOnClickListener { switchTab(PanelRenderer.Tab.NETWORK) }
         binding.tabThreejs.setOnClickListener { switchTab(PanelRenderer.Tab.THREEJS) }
         binding.panelReload.setOnClickListener { binding.webView.reload() }
+    }
+
+    private fun excludeFromSystemGestures(view: View) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        view.addOnLayoutChangeListener { v, l, t, r, b, _, _, _, _ ->
+            v.systemGestureExclusionRects = listOf(Rect(0, 0, r - l, b - t))
+        }
     }
 
     private fun switchTab(tab: PanelRenderer.Tab) {

@@ -34,40 +34,16 @@
             android:clipChildren="false"
             android:clipToPadding="false">
 
-            <FrameLayout
-                android:id="@+id/threeLogoButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+            <ImageButton
+                android:id="@+id/panelReload"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:layout_marginStart="6dp"
                 android:layout_marginEnd="14dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_refresh"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:clipChildren="false"
-                android:clipToPadding="false">
-
-                <ImageView
-                    android:id="@+id/threeLogo"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/three_logo"
-                    android:alpha="0.3"
-                    android:contentDescription="three.js detection status" />
-
-                <TextView
-                    android:id="@+id/revisionBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|center_horizontal"
-                    android:layout_marginBottom="-5dp"
-                    android:background="@drawable/revision_badge_bg"
-                    android:paddingHorizontal="2dp"
-                    android:paddingVertical="0dp"
-                    android:textSize="9sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnPrimary"
-                    android:includeFontPadding="false"
-                    android:visibility="invisible" />
-
-            </FrameLayout>
+                android:contentDescription="Reload" />
 
             <LinearLayout
                 android:id="@+id/urlBubble"
@@ -98,16 +74,40 @@
 
             </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/settingsButton"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+            <FrameLayout
+                android:id="@+id/threeLogoButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="14dp"
                 android:layout_marginEnd="6dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_settings"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Settings" />
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <ImageView
+                    android:id="@+id/threeLogo"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/three_logo"
+                    android:alpha="0.3"
+                    android:contentDescription="three.js detection status" />
+
+                <TextView
+                    android:id="@+id/revisionBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|center_horizontal"
+                    android:layout_marginBottom="-5dp"
+                    android:background="@drawable/revision_badge_bg"
+                    android:paddingHorizontal="2dp"
+                    android:paddingVertical="0dp"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:includeFontPadding="false"
+                    android:visibility="invisible" />
+
+            </FrameLayout>
 
         </LinearLayout>
 
@@ -120,73 +120,56 @@
         android:orientation="vertical"
         android:background="?attr/colorSurface">
 
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="14dp"
-            android:paddingVertical="10dp">
+            android:paddingVertical="10dp"
+            android:orientation="horizontal"
+            android:gravity="center">
 
-            <LinearLayout
+            <TextView
+                android:id="@+id/tabSource"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:text="Source"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:padding="6dp"
+                android:textColor="?attr/colorOnSurface"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true" />
 
-                <TextView
-                    android:id="@+id/tabSource"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Source"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:padding="6dp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true" />
+            <TextView
+                android:id="@+id/tabNetwork"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Network"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:padding="6dp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true" />
 
-                <TextView
-                    android:id="@+id/tabNetwork"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="Network"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:padding="6dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true" />
+            <TextView
+                android:id="@+id/tabThreejs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Three.js"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:padding="6dp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true" />
 
-                <TextView
-                    android:id="@+id/tabThreejs"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="Three.js"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:padding="6dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true" />
-
-            </LinearLayout>
-
-            <ImageButton
-                android:id="@+id/panelReload"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_gravity="end|center_vertical"
-                android:scaleType="fitCenter"
-                android:src="@drawable/ic_refresh"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Reload" />
-
-        </FrameLayout>
+        </LinearLayout>
 
         <FrameLayout
             android:layout_width="match_parent"
