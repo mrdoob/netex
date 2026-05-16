@@ -14,6 +14,20 @@
     document.getElementById('console-tab').classList.toggle('active', tab === 'console');
     document.getElementById('source-tab').classList.toggle('active', tab === 'source');
     document.getElementById('network-tab').classList.toggle('active', tab === 'network');
+    // Entries that arrived while the tab was hidden don't trigger auto-scroll
+    // (scrollHeight is 0 when the tab is display:none); pin to bottom on first
+    // reveal so the user lands on the latest. requestAnimationFrame waits for
+    // layout to flush after the display flip.
+    if (tab === 'console' && !consoleScrolledUp) {
+      requestAnimationFrame(function () {
+        var entries = document.getElementById('consoleEntries');
+        entries.scrollTop = entries.scrollHeight;
+      });
+    } else if (tab === 'network' && !networkScrolledUp) {
+      requestAnimationFrame(function () {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+      });
+    }
   }
 
   function setSource(html) {
@@ -67,6 +81,7 @@
     tab.appendChild(p);
     totalBytes = 0;
     totalCount = 0;
+    networkScrolledUp = false;
     updateTotals();
   }
 
@@ -307,6 +322,7 @@
 
   function clearConsole() {
     document.getElementById('consoleEntries').replaceChildren();
+    consoleScrolledUp = false;
   }
 
   function submitEval(source) {
