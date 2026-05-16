@@ -28,11 +28,12 @@ NETEX_PROFILE_RUN_TESTS=1 Scripts/profile_netex_ios.sh
 The committed project keeps upstream-neutral signing defaults. Local device installs should use command-line overrides:
 
 ```sh
-xcodebuild -project NetexIOS.xcodeproj -scheme NetexIOS -configuration Debug -destination 'generic/platform=iOS' -allowProvisioningUpdates build DEVELOPMENT_TEAM=<TEAM_ID> PRODUCT_BUNDLE_IDENTIFIER=<YOUR_BUNDLE_ID>
-xcrun devicectl device install app --device <DEVICE_ID> ~/Library/Developer/Xcode/DerivedData/NetexIOS-*/Build/Products/Debug-iphoneos/NetexIOS.app
+COPYFILE_DISABLE=1 xcodebuild -project NetexIOS.xcodeproj -scheme NetexIOS -configuration Debug -destination 'id=<DEVICE_UDID>' -derivedDataPath ../../artifacts/DeviceDerivedData -allowProvisioningUpdates -allowProvisioningDeviceRegistration build DEVELOPMENT_TEAM=<TEAM_ID> PRODUCT_BUNDLE_IDENTIFIER=<YOUR_BUNDLE_ID>
+xcrun devicectl device install app --device <COREDEVICE_ID> ../../artifacts/DeviceDerivedData/Build/Products/Debug-iphoneos/NetexIOS.app
+xcrun devicectl device process launch --device <COREDEVICE_ID> <YOUR_BUNDLE_ID>
 ```
 
-Do not commit personal development teams, bundle IDs, or provisioning profiles.
+`COPYFILE_DISABLE=1` is included because macOS resource fork or Finder metadata on copied bundle resources can make iOS codesign reject an otherwise valid development build. Do not commit personal development teams, bundle IDs, or provisioning profiles.
 
 ## Third-Party Asset Licenses
 

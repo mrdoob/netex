@@ -85,11 +85,12 @@ For a local development install, pass your own Apple development team and a bund
 
 ```sh
 cd iOS/NetexIOS
-xcodebuild -project NetexIOS.xcodeproj -scheme NetexIOS -configuration Debug -destination 'generic/platform=iOS' -allowProvisioningUpdates build DEVELOPMENT_TEAM=<TEAM_ID> PRODUCT_BUNDLE_IDENTIFIER=<YOUR_BUNDLE_ID>
-xcrun devicectl device install app --device <DEVICE_ID> ~/Library/Developer/Xcode/DerivedData/NetexIOS-*/Build/Products/Debug-iphoneos/NetexIOS.app
+COPYFILE_DISABLE=1 xcodebuild -project NetexIOS.xcodeproj -scheme NetexIOS -configuration Debug -destination 'id=<DEVICE_UDID>' -derivedDataPath ../../artifacts/DeviceDerivedData -allowProvisioningUpdates -allowProvisioningDeviceRegistration build DEVELOPMENT_TEAM=<TEAM_ID> PRODUCT_BUNDLE_IDENTIFIER=<YOUR_BUNDLE_ID>
+xcrun devicectl device install app --device <COREDEVICE_ID> ../../artifacts/DeviceDerivedData/Build/Products/Debug-iphoneos/NetexIOS.app
+xcrun devicectl device process launch --device <COREDEVICE_ID> <YOUR_BUNDLE_ID>
 ```
 
-The project defaults stay neutral for upstream review. Do not commit personal team IDs, provisioning profiles, or local bundle IDs.
+Use `xcodebuild -showdestinations -project NetexIOS.xcodeproj -scheme NetexIOS` for the Xcode device UDID and `xcrun devicectl list devices` for the CoreDevice install/launch id. `COPYFILE_DISABLE=1` prevents macOS resource fork or Finder metadata from being copied into the app bundle and rejected by codesign. The project defaults stay neutral for upstream review. Do not commit personal team IDs, provisioning profiles, or local bundle IDs.
 
 ## Known Deltas
 
