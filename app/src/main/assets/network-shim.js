@@ -41,15 +41,21 @@
     return 'r-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
   }
 
-  function captureBlob(blob) {
-    if (!blob || blob.size > MAX_BINARY) return '';
+  function captureBlob(rid, blob) {
+    if (!blob || blob.size > MAX_BINARY) return;
     if (ns.blobs.size >= MAX_BLOBS) {
       var oldest = ns.blobs.keys().next().value;
       if (oldest) ns.blobs.delete(oldest);
     }
-    var rid = newRequestId();
     ns.blobs.set(rid, blob);
-    return rid;
+  }
+
+  function postPending(method, url, requestId, duration, size) {
+    post({
+      method: method.toUpperCase(), url: url, status: 0, body: '',
+      contentType: '', duration: duration, size: size,
+      requestId: requestId, pending: true
+    });
   }
 
   ns.readBlob = function (rid) {
@@ -92,12 +98,14 @@
     window.fetch = function (input, init) {
       var url = typeof input === 'string' ? input : (input && input.url) || '';
       var method = (init && init.method) || (input && input.method) || 'GET';
+      var requestId = newRequestId();
       var start = Date.now();
+      postPending(method, url, requestId, 0, 0);
       var promise = origFetch.apply(this, arguments);
       promise.then(function (response) {
         var ct = response.headers.get('content-type') || '';
         var lenHeader = parseLen(response.headers.get('content-length'));
-        var emit = function (body, requestId, size) {
+        var emit = function (body, size) {
           post({
             method: method.toUpperCase(),
             url: url,
@@ -106,16 +114,16 @@
             contentType: ct,
             duration: Date.now() - start,
             size: size || 0,
-            requestId: requestId || ''
+            requestId: requestId
           });
         };
         if (isBinaryDisplayable(ct)) {
           response.clone().blob()
-            .then(function (blob) { emit('', captureBlob(blob), lenHeader || blob.size); })
-            .catch(function () { emit('', '', lenHeader); });
+            .then(function (blob) { captureBlob(requestId, blob); emit('', lenHeader || blob.size); })
+            .catch(function () { emit('', lenHeader); });
         } else {
           response.clone().text()
-            .then(function (b) { emit(clip(b), '', lenHeader || b.length); })
+            .then(function (b) { emit(clip(b), lenHeader || b.length); })
             .catch(function () {});
         }
       }).catch(function (err) {
@@ -126,7 +134,7 @@
           body: '',
           contentType: '',
           duration: Date.now() - start,
-          requestId: '',
+          requestId: requestId,
           error: String(err)
         });
       });
@@ -198,7 +206,19 @@
     };
     XHR.prototype.send = function () {
       var xhr = this;
+      var method = xhr._netMethod || 'GET';
+      var url = xhr._netUrl || '';
+      var requestId = newRequestId();
       var start = Date.now();
+      postPending(method, url, requestId, 0, 0);
+      // Throttle to ~4/s so big downloads (e.g. 12 MB STL) don't flood the bridge.
+      var lastProg = 0;
+      xhr.addEventListener('progress', function (e) {
+        var now = Date.now();
+        if (now - lastProg < 250) return;
+        lastProg = now;
+        postPending(method, url, requestId, now - start, e.loaded || 0);
+      });
       xhr.addEventListener('loadend', function () {
         var ct = xhr.getResponseHeader('content-type') || '';
         var lenHeader = parseLen(xhr.getResponseHeader('content-length'));
@@ -207,14 +227,14 @@
           try { body = xhr.responseText || ''; } catch (e) {}
         }
         post({
-          method: (xhr._netMethod || 'GET').toUpperCase(),
-          url: xhr._netUrl || '',
+          method: method.toUpperCase(),
+          url: url,
           status: xhr.status,
           body: clip(body),
           contentType: ct,
           duration: Date.now() - start,
           size: lenHeader || body.length || 0,
-          requestId: ''
+          requestId: requestId
         });
       });
       return origSend.apply(this, arguments);

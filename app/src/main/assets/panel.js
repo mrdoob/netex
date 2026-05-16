@@ -66,52 +66,64 @@
   function appendNetworkRow(payload) {
     var r = typeof payload === 'string' ? JSON.parse(payload) : payload;
     var container = document.getElementById('network-tab');
-    var empty = container.querySelector('.empty');
-    if (empty) empty.remove();
-    totalCount++;
-    totalBytes += r.size || 0;
+    var det = r.requestId
+      ? container.querySelector('details.req[data-rid="' + r.requestId + '"]')
+      : null;
+
+    if (!det) {
+      var empty = container.querySelector('.empty');
+      if (empty) empty.remove();
+      det = document.createElement('details');
+      det.className = 'req';
+      if (r.requestId) det.dataset.rid = r.requestId;
+      det.dataset.lastSize = '0';
+      container.appendChild(det);
+      totalCount++;
+      bindToggle(det, r.requestId);
+    }
+
+    // Track size delta per row so progress ticks update totals without double-counting.
+    var lastSize = parseInt(det.dataset.lastSize, 10) || 0;
+    var newSize = r.size || 0;
+    totalBytes += newSize - lastSize;
+    det.dataset.lastSize = String(newSize);
     updateTotals();
 
-    var det = document.createElement('details');
-    det.className = 'req';
-    if (r.requestId) det.dataset.rid = r.requestId;
+    renderRow(det, r);
+  }
 
-    var statusClass = r.status === 0 ? 's0'
-      : r.status >= 200 && r.status < 300 ? 's2xx'
-      : r.status >= 300 && r.status < 400 ? 's3xx'
-      : r.status >= 400 && r.status < 500 ? 's4xx'
+  function renderRow(det, r) {
+    var statusClass = (r.pending || r.status === 0) ? 's0'
+      : r.status < 300 ? 's2xx'
+      : r.status < 400 ? 's3xx'
+      : r.status < 500 ? 's4xx'
       : 's5xx';
-    var statusText = r.status === 0 ? '—' : r.status;
+    var statusText = r.pending ? '…' : r.status === 0 ? '—' : r.status;
 
     var summary = document.createElement('summary');
     summary.appendChild(span('method ' + r.method, r.method));
     summary.appendChild(span('url', r.displayUrl || r.url));
     if (r.size) summary.appendChild(span('size', formatSize(r.size)));
     summary.appendChild(span('status ' + statusClass, statusText));
-    det.appendChild(summary);
 
     var body = document.createElement('div');
     body.className = 'body';
-    det.appendChild(body);
+    if (!r.pending) body.appendChild(buildMedia(r) || buildText(r));
 
-    var media = buildMedia(r);
-    if (media) {
-      body.appendChild(media);
-    } else {
-      body.appendChild(buildText(r));
-    }
+    det.replaceChildren(summary, body);
+  }
 
-    if (r.requestId && media) {
-      det.addEventListener('toggle', function () {
-        if (!det.open || det.dataset.loaded) return;
-        det.dataset.loaded = '1';
-        requestBlob(r.requestId, function (dataUrl) {
-          if (dataUrl) media.src = dataUrl;
-        });
+  function bindToggle(det, rid) {
+    if (!rid) return;
+    det.addEventListener('toggle', function () {
+      if (!det.open || det.dataset.loaded) return;
+      var media = det.querySelector(':scope > .body > img, :scope > .body > model-viewer');
+      if (!media) return;
+      det.dataset.loaded = '1';
+      requestBlob(rid, function (dataUrl) {
+        if (dataUrl) media.src = dataUrl;
       });
-    }
-
-    container.appendChild(det);
+    });
   }
 
   function buildMedia(r) {

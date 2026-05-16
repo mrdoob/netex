@@ -69,6 +69,7 @@ class PanelRenderer(
             put("durationMs", record.durationMs)
             put("size", record.sizeBytes)
             put("requestId", record.requestId ?: "")
+            put("pending", record.pending)
         }.toString()
         afterShellLoaded {
             evalPanel("window.__panel.appendNetworkRow($payload)")
