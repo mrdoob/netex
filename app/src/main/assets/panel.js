@@ -301,6 +301,9 @@
 
   function submitEval(source) {
     if (!source) return;
+    // Pin to bottom when the user runs a command — they want to see the result, even
+    // if they had scrolled up to inspect earlier logs.
+    consoleScrolledUp = false;
     history.push(source);
     if (history.length > MAX_HISTORY) history.shift();
     historyCursor = -1;
