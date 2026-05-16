@@ -9,11 +9,17 @@ final class BrowserViewController: UIViewController {
         case three = 3
     }
 
+    private let navigationPolicy = NetexNavigationPolicy()
     private let addressField = UITextField()
+    private let homeButton = UIButton(type: .system)
     private let reloadButton = UIButton(type: .system)
+    private let hideInspectorButton = UIButton(type: .system)
+    private let showInspectorButton = UIButton(type: .system)
     private let tabs = UISegmentedControl(items: ["Console", "Source", "Network", "Three.js"])
     private let pageProgress = UIProgressView(progressViewStyle: .bar)
+    private let panelHeader = UIStackView()
     private let panelContainer = UIView()
+    private let blockedNavigationLabel = UILabel()
     private var pageView: WKWebView!
     private var panelView: WKWebView!
     private var threePanelView: WKWebView!
@@ -125,28 +131,63 @@ final class BrowserViewController: UIViewController {
         addressField.returnKeyType = .go
         addressField.clearButtonMode = .whileEditing
         addressField.delegate = self
-        addressField.placeholder = "Search or enter website"
+        addressField.placeholder = "Three.js example URL"
         addressField.accessibilityIdentifier = "netex.address"
+
+        homeButton.setImage(UIImage(systemName: "house"), for: .normal)
+        homeButton.addTarget(self, action: #selector(homeTapped), for: .touchUpInside)
+        homeButton.accessibilityLabel = "Home"
+        homeButton.accessibilityIdentifier = "netex.home"
+        homeButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
 
         reloadButton.setImage(UIImage(systemName: "arrow.clockwise"), for: .normal)
         reloadButton.addTarget(self, action: #selector(reloadTapped), for: .touchUpInside)
         reloadButton.accessibilityLabel = "Reload"
         reloadButton.accessibilityIdentifier = "netex.reload"
+        reloadButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
+
+        hideInspectorButton.setImage(UIImage(systemName: "chevron.down"), for: .normal)
+        hideInspectorButton.addTarget(self, action: #selector(hideInspectorTapped), for: .touchUpInside)
+        hideInspectorButton.accessibilityLabel = "Hide Inspector"
+        hideInspectorButton.accessibilityIdentifier = "netex.hideInspector"
+        hideInspectorButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
+
+        var showConfig = UIButton.Configuration.filled()
+        showConfig.image = UIImage(systemName: "chevron.up")
+        showConfig.title = "Inspector"
+        showConfig.imagePadding = 6
+        showConfig.cornerStyle = .capsule
+        showInspectorButton.configuration = showConfig
+        showInspectorButton.addTarget(self, action: #selector(showInspectorTapped), for: .touchUpInside)
+        showInspectorButton.accessibilityLabel = "Show Inspector"
+        showInspectorButton.accessibilityIdentifier = "netex.showInspector"
+        showInspectorButton.isHidden = true
+        showInspectorButton.translatesAutoresizingMaskIntoConstraints = false
 
         tabs.selectedSegmentIndex = 0
         tabs.addTarget(self, action: #selector(tabChanged), for: .valueChanged)
         tabs.accessibilityIdentifier = "netex.tabs"
 
-        let toolbar = UIStackView(arrangedSubviews: [addressField, reloadButton])
+        blockedNavigationLabel.textAlignment = .center
+        blockedNavigationLabel.font = .preferredFont(forTextStyle: .footnote)
+        blockedNavigationLabel.textColor = .secondaryLabel
+        blockedNavigationLabel.backgroundColor = .secondarySystemBackground
+        blockedNavigationLabel.numberOfLines = 2
+        blockedNavigationLabel.isHidden = true
+        blockedNavigationLabel.accessibilityIdentifier = "netex.blockedNavigation"
+
+        let toolbar = UIStackView(arrangedSubviews: [homeButton, addressField, reloadButton])
         toolbar.axis = .horizontal
         toolbar.spacing = 8
         toolbar.alignment = .center
         toolbar.layoutMargins = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
         toolbar.isLayoutMarginsRelativeArrangement = true
-        reloadButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
 
-        let panelHeader = UIStackView(arrangedSubviews: [tabs])
+        panelHeader.addArrangedSubview(tabs)
+        panelHeader.addArrangedSubview(hideInspectorButton)
         panelHeader.axis = .horizontal
+        panelHeader.spacing = 8
+        panelHeader.alignment = .center
         panelHeader.layoutMargins = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
         panelHeader.isLayoutMarginsRelativeArrangement = true
         panelHeader.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(panelPanned(_:))))
@@ -162,11 +203,12 @@ final class BrowserViewController: UIViewController {
             ])
         }
 
-        let stack = UIStackView(arrangedSubviews: [toolbar, pageProgress, pageView, panelHeader, panelContainer])
+        let stack = UIStackView(arrangedSubviews: [toolbar, blockedNavigationLabel, pageProgress, pageView, panelHeader, panelContainer])
         stack.axis = .vertical
         stack.spacing = 0
         stack.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(stack)
+        view.addSubview(showInspectorButton)
 
         panelHeightConstraint = panelContainer.heightAnchor.constraint(equalToConstant: defaultPanelHeight)
         panelHeightConstraint.isActive = true
@@ -175,7 +217,9 @@ final class BrowserViewController: UIViewController {
             stack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
             stack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            stack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            showInspectorButton.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            showInspectorButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12)
         ])
     }
 
@@ -246,6 +290,43 @@ final class BrowserViewController: UIViewController {
             loadStartPage()
         } else {
             pageView.reload()
+        }
+    }
+
+    @objc private func homeTapped() {
+        loadStartPage()
+    }
+
+    @objc private func hideInspectorTapped() {
+        setInspectorHidden(true)
+    }
+
+    @objc private func showInspectorTapped() {
+        setInspectorHidden(false)
+    }
+
+    private func setInspectorHidden(_ hidden: Bool, animated: Bool = true) {
+        let changes = {
+            self.panelHeader.isHidden = hidden
+            self.panelContainer.isHidden = hidden
+            self.showInspectorButton.isHidden = !hidden
+            self.view.layoutIfNeeded()
+        }
+
+        if animated {
+            UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseOut], animations: changes)
+        } else {
+            changes()
+        }
+    }
+
+    private func showBlockedNavigation(_ url: URL?) {
+        let host = url?.host ?? "external page"
+        blockedNavigationLabel.text = "Blocked external navigation to \(host). Use Home to return to Netex."
+        blockedNavigationLabel.isHidden = false
+        UIAccessibility.post(notification: .announcement, argument: blockedNavigationLabel.text)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+            self?.blockedNavigationLabel.isHidden = true
         }
     }
 
@@ -432,6 +513,14 @@ extension BrowserViewController: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if webView === pageView {
+            let targetIsMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+            if navigationPolicy.decision(for: navigationAction.request.url, targetIsMainFrame: targetIsMainFrame) == .block {
+                showBlockedNavigation(navigationAction.request.url)
+                decisionHandler(.cancel)
+                return
+            }
+        }
         decisionHandler(.allow)
     }
 }
@@ -439,7 +528,11 @@ extension BrowserViewController: WKNavigationDelegate {
 extension BrowserViewController: WKUIDelegate {
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-            load(url)
+            if navigationPolicy.decision(for: url, targetIsMainFrame: true) == .allow {
+                load(url)
+            } else {
+                showBlockedNavigation(url)
+            }
         }
         return nil
     }

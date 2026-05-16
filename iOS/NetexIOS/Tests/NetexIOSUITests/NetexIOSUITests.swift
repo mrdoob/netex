@@ -27,4 +27,19 @@ final class NetexIOSUITests: XCTestCase {
 
         XCTAssertTrue(app.webViews["netex.threePanel"].waitForExistence(timeout: 5))
     }
+
+    func testInspectorCanHideAndRestore() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--netex-reset"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Netex"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.segmentedControls["netex.tabs"].exists)
+
+        app.buttons["Hide Inspector"].tap()
+        XCTAssertFalse(app.segmentedControls["netex.tabs"].waitForExistence(timeout: 1))
+
+        app.buttons["Show Inspector"].tap()
+        XCTAssertTrue(app.segmentedControls["netex.tabs"].waitForExistence(timeout: 2))
+    }
 }
