@@ -80,7 +80,6 @@ class MainActivity : AppCompatActivity() {
     private var progressAnimator: Animator? = null
     private var progressClip: ClipDrawable? = null
     private var imeWasOpen = false
-    private var panelAnimator: Animator? = null
 
     private var currentUrl: String = BLANK_URL
     private var currentTitle: String? = null
@@ -445,7 +444,6 @@ class MainActivity : AppCompatActivity() {
                 loadUrl(v.text.toString())
                 v.clearFocus()
                 hideKeyboard(v)
-                animatePanelTo(0)
                 true
             } else false
         }
@@ -625,7 +623,6 @@ class MainActivity : AppCompatActivity() {
         var startHeight = 0
         val onStart: () -> Unit = {
             startHeight = binding.bottomPanel.layoutParams.height
-            panelAnimator?.cancel()
         }
         // Y axis grows downward → up-drag has negative dy → panel grows.
         val onMove: (Float) -> Unit = { dy ->
@@ -645,18 +642,6 @@ class MainActivity : AppCompatActivity() {
         params.height = h
         p.layoutParams = params
         if (wasClosed && h > 0 && currentTab == PanelRenderer.Tab.SOURCE) maybeRefreshSource()
-    }
-
-    private fun animatePanelTo(target: Int) {
-        panelAnimator?.cancel()
-        val current = binding.bottomPanel.layoutParams.height
-        if (current == target) return
-        panelAnimator = ValueAnimator.ofInt(current, target).apply {
-            duration = 200L
-            interpolator = DecelerateInterpolator()
-            addUpdateListener { setPanelHeight(it.animatedValue as Int) }
-            start()
-        }
     }
 
     private fun maybeRefreshSource() {
