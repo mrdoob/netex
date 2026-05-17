@@ -40,9 +40,9 @@ final class BrowserViewController: UIViewController {
     }
 
     private let examples: [Example] = [
-        Example(title: "Examples", urlString: "https://threejs.org/examples/"),
-        Example(title: "Animated Model", urlString: "https://threejs.org/examples/#webgl_animation_keyframes"),
-        Example(title: "glTF Loader", urlString: "https://threejs.org/examples/#webgl_loader_gltf")
+        Example(title: "Animated City Block", urlString: "https://threejs.org/examples/#webgl_animation_keyframes"),
+        Example(title: "glTF Loader", urlString: "https://threejs.org/examples/#webgl_loader_gltf"),
+        Example(title: "Examples Gallery", urlString: "https://threejs.org/examples/")
     ]
 
     private lazy var consoleBatcher = MessageBatcher<ConsoleEntry>(maxBatchSize: 32, delay: 0.05) { [weak self] batch in

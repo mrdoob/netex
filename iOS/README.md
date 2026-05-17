@@ -7,7 +7,7 @@ The Android app remains the upstream implementation. This target keeps the same 
 ## Status
 
 - Local Netex start page instead of a remote default launch URL.
-- Focused top chrome with Home, page title, Reload, and an Examples menu.
+- Focused top chrome with Home, page title, Reload, and an Examples menu led by the classic animated city-block scene.
 - Curated Three.js entry points for the examples gallery, animated model, and glTF loader, with custom URL entry kept in the advanced menu.
 - Reload control and back/forward swipe gestures through `WKWebView`.
 - Console panel with batched injected `console.*` forwarding.
