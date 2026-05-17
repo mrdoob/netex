@@ -1,6 +1,6 @@
 # Netex iOS
 
-Experimental iOS port of Netex 0.3.0, built as an upstream-safe sibling to the Android app.
+iOS sibling target for Netex, built as an upstream-safe companion to the Android app.
 
 The Android app remains the upstream implementation. This target keeps the same core idea on iPhone: a compact browser backed by `WKWebView`, with a lower developer panel for Console, Source, Network, and Three.js.
 
@@ -11,7 +11,7 @@ The Android app remains the upstream implementation. This target keeps the same 
 - Curated Three.js entry points for the examples gallery, animated model, and glTF loader, with custom URL entry kept in the advanced menu.
 - Reload control and back/forward swipe gestures through `WKWebView`.
 - Console panel with batched injected `console.*` forwarding.
-- Source panel using `document.documentElement.outerHTML`, with local lazy-loaded beautifier/highlighter assets and an experimental live-session edit mode. Source edits apply by rewriting the current page document only; they are not persisted to bundled examples or upstream files, and the panel keeps a one-tap in-memory Revert checkpoint from the moment editing starts.
+- Source panel using `document.documentElement.outerHTML`, with local lazy-loaded beautifier/highlighter assets. The read-only view is syntax-highlighted; Edit mode uses a visible native text surface on iOS so caret placement and text insertion stay reliable. Source edits apply by rewriting the current page document only; they are not persisted to bundled examples or upstream files, and the panel keeps a one-tap in-memory Revert checkpoint from the moment editing starts.
 - Network panel using injected `fetch` / `XMLHttpRequest` capture, blob preview storage, and a single full-screen lazy model preview that uses `model-viewer`'s native one-finger orbit and two-finger pan.
 - Three.js panel backed by vendored `threejs-devtools/` assets and iOS chrome-shim routing.
 - Bundle-backed `netex-assets://` scheme for panel, vendor, and Three.js DevTools resources.
@@ -76,10 +76,6 @@ To launch the local stress harness manually:
 xcrun simctl launch booted com.mrdoob.netex.ios --netex-reset --netex-url netex-assets://bundle/NetexAssets/stress.html
 ```
 
-## Upstream PR Notes
-
-Use `PR_NOTES.md` as the draft PR body and contribution checklist. It documents architecture, verification, signing posture, known deltas, and third-party asset license checks.
-
 ## Install On A Paired iPhone
 
 For a local development install, pass your own Apple development team and a bundle id that belongs to that team:
@@ -95,15 +91,13 @@ Scripts/build_device.sh
 
 Use `xcodebuild -showdestinations -project NetexIOS.xcodeproj -scheme NetexIOS` for the Xcode device UDID and `xcrun devicectl list devices` for the CoreDevice install/launch id. The helper keeps upstream signing defaults neutral, builds with command-line signing overrides, strips macOS bundle metadata if codesign rejects it, verifies the signed app, installs when `COREDEVICE_ID` is set, and writes receipts under `artifacts/`. Do not commit personal team IDs, provisioning profiles, or local bundle IDs.
 
-For the underlying command-line shape without the helper, see `PR_NOTES.md`.
-
 ## Third-Party Notices
 
 The iOS target bundles local inspector assets to avoid first-run CDN fetches. See `THIRD_PARTY_NOTICES.md` for bundled dependency sources, versions checked, and license notes.
 
 ## Known Deltas
 
-- Physical-device performance must be validated with a working Apple development team and provisioning profile.
+- Physical-device performance depends on local Apple development provisioning; use `Scripts/build_device.sh` for local install receipts.
 - The Three.js tab uses the vendored extension panel and shim routing. Treat changes under `Resources/NetexAssets/threejs-devtools/` as vendored unless an upstream Three.js DevTools fix is intentionally being made.
 - Keep Android untouched unless a shared JS bug fix is proven and tested on both platforms.
 
