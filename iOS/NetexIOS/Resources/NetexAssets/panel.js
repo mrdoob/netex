@@ -36,24 +36,6 @@
     return loadScript(ASSET_BASE + 'model-viewer.min.js', { type: 'module' }).catch(function () {});
   }
 
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-  }
-
-  function parseAngle(value, fallback) {
-    var parsed = parseFloat(String(value || '').replace('deg', ''));
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-
-  function parseOrbit(value) {
-    var parts = String(value || '').trim().split(/\s+/);
-    return {
-      theta: parseAngle(parts[0], 0),
-      phi: parseAngle(parts[1], 75),
-      radius: parts[2] || 'auto'
-    };
-  }
-
   function touchCentroid(touches) {
     return {
       x: (touches[0].clientX + touches[1].clientX) / 2,
@@ -61,27 +43,74 @@
     };
   }
 
-  function setOrbit(mv, orbit) {
+  function parseMeters(value, fallback) {
+    var parsed = parseFloat(String(value || '').replace('m', ''));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function readCameraTarget(mv) {
+    if (typeof mv.getCameraTarget === 'function') {
+      try {
+        var live = mv.getCameraTarget();
+        if (live && Number.isFinite(live.x) && Number.isFinite(live.y) && Number.isFinite(live.z)) {
+          return { x: live.x, y: live.y, z: live.z };
+        }
+      } catch (e) {}
+    }
+
+    var parts = String(mv.getAttribute('camera-target') || '').trim().split(/\s+/);
+    return {
+      x: parseMeters(parts[0], 0),
+      y: parseMeters(parts[1], 0),
+      z: parseMeters(parts[2], 0)
+    };
+  }
+
+  function panScale(mv) {
+    var rect = mv.getBoundingClientRect();
+    var basis = Math.max(1, Math.min(rect.width || 1, rect.height || 1));
+    var radius = 2;
+    if (typeof mv.getCameraOrbit === 'function') {
+      try {
+        var orbit = mv.getCameraOrbit();
+        if (orbit && Number.isFinite(orbit.radius)) radius = Math.max(0.5, orbit.radius);
+      } catch (e) {}
+    }
+    return radius / basis * 1.35;
+  }
+
+  function cameraRight(mv) {
+    var theta = 0;
+    if (typeof mv.getCameraOrbit === 'function') {
+      try {
+        var orbit = mv.getCameraOrbit();
+        if (orbit && Number.isFinite(orbit.theta)) theta = orbit.theta;
+      } catch (e) {}
+    }
+    return { x: Math.cos(theta), z: -Math.sin(theta) };
+  }
+
+  function setCameraTarget(mv, target) {
     mv.setAttribute(
-      'camera-orbit',
-      orbit.theta.toFixed(1) + 'deg ' + orbit.phi.toFixed(1) + 'deg ' + orbit.radius
+      'camera-target',
+      target.x.toFixed(3) + 'm ' + target.y.toFixed(3) + 'm ' + target.z.toFixed(3) + 'm'
     );
   }
 
-  function installModelViewerGestures(mv) {
-    if (mv.__netexModelGestureBound) return;
-    mv.__netexModelGestureBound = true;
+  function installModelViewerPanGestures(mv) {
+    if (mv.__netexModelPanGestureBound) return;
+    mv.__netexModelPanGestureBound = true;
 
     var active = false;
     var last = null;
-    var orbit = parseOrbit(mv.getAttribute('camera-orbit'));
+    var target = readCameraTarget(mv);
 
     mv.addEventListener('touchstart', function (event) {
       if (event.touches.length === 2) {
         event.preventDefault();
         active = true;
         last = touchCentroid(event.touches);
-        orbit = parseOrbit(mv.getAttribute('camera-orbit'));
+        target = readCameraTarget(mv);
         mv.removeAttribute('auto-rotate');
       }
     }, { passive: false });
@@ -93,10 +122,13 @@
       var next = touchCentroid(event.touches);
       var dx = next.x - last.x;
       var dy = next.y - last.y;
+      var scale = panScale(mv);
+      var right = cameraRight(mv);
 
-      orbit.theta += dx * 0.35;
-      orbit.phi = clamp(orbit.phi + dy * 0.25, 10, 170);
-      setOrbit(mv, orbit);
+      target.x -= dx * scale * right.x;
+      target.z -= dx * scale * right.z;
+      target.y += dy * scale;
+      setCameraTarget(mv, target);
       last = next;
     }, { passive: false });
 
@@ -265,9 +297,12 @@
       mv.setAttribute('camera-controls', '');
       mv.setAttribute('auto-rotate', '');
       mv.setAttribute('camera-orbit', '0deg 75deg auto');
+      mv.setAttribute('camera-target', '0m 0m 0m');
+      mv.setAttribute('interaction-prompt', 'none');
       mv.setAttribute('touch-action', 'none');
+      mv.style.setProperty('--interaction-prompt-display', 'none');
       if (!r.requestId) mv.setAttribute('src', r.url);
-      installModelViewerGestures(mv);
+      installModelViewerPanGestures(mv);
       ensureModelViewer();
       return mv;
     }
