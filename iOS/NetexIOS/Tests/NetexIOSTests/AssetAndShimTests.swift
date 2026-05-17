@@ -114,7 +114,7 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(shell.contains("#source-tab .source-view { flex:1; min-height:0; overflow:auto; background:var(--panel-bg);"))
         XCTAssertTrue(shell.contains("#source-tab pre { margin:0; padding:6px 8px; font-size:10.5px; line-height:1.22; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:2;"))
         XCTAssertTrue(shell.contains("#source-tab .source-editor-wrap { display:none; position:relative; flex:1; min-height:0; overflow:hidden; background:var(--panel-bg);"))
-        XCTAssertTrue(shell.contains(".source-editor-highlight, #sourceEditor { position:absolute; inset:0; box-sizing:border-box; width:100%; height:100%; margin:0; border:0; padding:6px 8px; font:10.5px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2;"))
+        XCTAssertTrue(shell.contains(".source-editor-highlight, #sourceEditor { position:absolute; inset:0; box-sizing:border-box; width:100%; height:100%; margin:0; border:0; padding:6px 8px; font:10.5px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-ligatures:none; letter-spacing:0; white-space:pre; overflow-x:auto; overflow-y:auto; overflow-wrap:normal; tab-size:2;"))
         XCTAssertTrue(shell.contains("-webkit-text-size-adjust:100%; -webkit-appearance:none; caret-color:#93c5fd;"))
     }
 
@@ -158,5 +158,23 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(script.contains("renderSourceFindHighlights"))
         XCTAssertTrue(script.contains("scrollEditorToOffset"))
         XCTAssertTrue(script.contains("findInSource(e.shiftKey ? -1 : 1)"))
+    }
+
+    func testSourceEditorOverlayDisablesSoftWrapAndUsesStableMetrics() {
+        let shell = AssetLoader.text("panel-shell", ext: "html")
+
+        XCTAssertTrue(shell.contains("wrap=\"off\""))
+        XCTAssertTrue(shell.contains("font-variant-ligatures:none;"))
+        XCTAssertTrue(shell.contains("letter-spacing:0;"))
+        XCTAssertTrue(shell.contains("overflow-x:auto;"))
+    }
+
+    func testSourceFindScrollsEditModeToVisibleHighlightedMark() {
+        let script = AssetLoader.text("panel", ext: "js")
+
+        XCTAssertTrue(script.contains("active.offsetTop"))
+        XCTAssertTrue(script.contains("active.offsetLeft"))
+        XCTAssertTrue(script.contains("editor.scrollTop = Math.max(0, active.offsetTop"))
+        XCTAssertTrue(script.contains("editor.scrollLeft = Math.max(0, active.offsetLeft"))
     }
 }

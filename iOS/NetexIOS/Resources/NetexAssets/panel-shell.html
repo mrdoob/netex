@@ -42,7 +42,7 @@ body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--
 #source-tab pre { margin:0; padding:6px 8px; font-size:10.5px; line-height:1.22; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:2; }
 #source-tab code { display:block; min-width:max-content; }
 #source-tab .source-editor-wrap { display:none; position:relative; flex:1; min-height:0; overflow:hidden; background:var(--panel-bg); }
-.source-editor-highlight, #sourceEditor { position:absolute; inset:0; box-sizing:border-box; width:100%; height:100%; margin:0; border:0; padding:6px 8px; font:10.5px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2; }
+.source-editor-highlight, #sourceEditor { position:absolute; inset:0; box-sizing:border-box; width:100%; height:100%; margin:0; border:0; padding:6px 8px; font:10.5px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-ligatures:none; letter-spacing:0; white-space:pre; overflow-x:auto; overflow-y:auto; overflow-wrap:normal; tab-size:2; }
 .source-editor-highlight { z-index:1; pointer-events:none; color:var(--fg); background:var(--panel-bg); }
 #sourceEditor { z-index:2; resize:none; outline:none; background:transparent; color:transparent; -webkit-text-fill-color:transparent; -webkit-text-size-adjust:100%; -webkit-appearance:none; caret-color:#93c5fd; }
 #sourceEditor::selection { background:rgba(147,197,253,0.28); }
@@ -105,7 +105,7 @@ code.hljs { background:transparent !important; padding:0 !important; }
     <div class="source-find"><input id="sourceFind" type="search" placeholder="Find" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /><button id="sourceFindPrev" type="button" aria-label="Previous match">↑</button><button id="sourceFindNext" type="button" aria-label="Next match">↓</button><span id="sourceFindCount">0/0</span></div>
   </div>
   <div class="source-view"><pre><code class="language-html"></code></pre></div>
-  <div id="sourceEditorWrap" class="source-editor-wrap"><pre class="source-editor-highlight" aria-hidden="true"><code id="sourceEditorHighlight" class="language-html"></code></pre><textarea id="sourceEditor" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></div>
+  <div id="sourceEditorWrap" class="source-editor-wrap"><pre class="source-editor-highlight" aria-hidden="true"><code id="sourceEditorHighlight" class="language-html"></code></pre><textarea id="sourceEditor" wrap="off" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></textarea></div>
 </div>
 <div id="network-tab"><div class="net-totals" id="netTotals"><span class="method"></span><span class="url" id="netTotalsCount"></span><span class="size" id="netTotalsSize"></span><span class="status"></span></div><p class="empty">No requests captured yet.</p></div>
 <div id="modelOverlay" class="model-overlay" hidden aria-hidden="true">

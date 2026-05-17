@@ -166,11 +166,16 @@
   }
 
   function scrollActiveSourceMatch() {
+    var active = document.querySelector('#source-tab .source-find-current');
     if (sourceEditMode) {
+      var editor = document.getElementById('sourceEditor');
+      if (active && editor) {
+        editor.scrollTop = Math.max(0, active.offsetTop - (editor.clientHeight * 0.38));
+        editor.scrollLeft = Math.max(0, active.offsetLeft - (editor.clientWidth * 0.25));
+      }
       syncSourceEditorScroll();
       return;
     }
-    var active = document.querySelector('#source-tab .source-find-current');
     if (active) active.scrollIntoView({ block: 'center', inline: 'center' });
   }
 
