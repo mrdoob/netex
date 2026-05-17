@@ -67,14 +67,27 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertEqual(NetexShimMode(rawValue: "unknown"), .full)
     }
 
-    func testPanelInstallsTwoFingerModelViewerPanGestureWithoutPromptArtifact() {
+    func testPanelLetsModelViewerOwnNativePanAndHidesBuiltInTargets() {
         let script = AssetLoader.text("panel", ext: "js")
+        let shell = AssetLoader.text("panel-shell", ext: "html")
 
-        XCTAssertTrue(script.contains("installModelViewerPanGestures"))
-        XCTAssertTrue(script.contains("__netexModelPanGestureBound"))
-        XCTAssertTrue(script.contains("touches.length === 2"))
-        XCTAssertTrue(script.contains("camera-target"))
+        XCTAssertFalse(script.contains("installModelViewerPanGestures"))
+        XCTAssertFalse(script.contains("touches.length === 2"))
+        XCTAssertFalse(script.contains("addEventListener('touchmove'"))
+        XCTAssertTrue(script.contains("openModelPreview"))
+        XCTAssertTrue(script.contains("overlayModelViewer"))
+        XCTAssertTrue(script.contains("ensureOverlayModelViewer"))
+        XCTAssertTrue(script.contains("buildModelPreviewTrigger"))
+        XCTAssertEqual(script.components(separatedBy: "document.createElement('model-viewer')").count - 1, 1)
+        XCTAssertFalse(script.contains(":scope > .body > img, :scope > .body > model-viewer"))
         XCTAssertTrue(script.contains("interaction-prompt"))
-        XCTAssertFalse(script.contains("orbit.theta +="))
+        XCTAssertTrue(script.contains("hiddenModelViewerSlot('pan-target')"))
+        XCTAssertTrue(script.contains("hiddenModelViewerSlot('interaction-prompt')"))
+        XCTAssertTrue(shell.contains("modelOverlay"))
+        XCTAssertTrue(shell.contains("modelStage"))
+        XCTAssertTrue(shell.contains(".model-overlay-stage"))
+        XCTAssertTrue(shell.contains(".model-preview-host"))
+        XCTAssertTrue(shell.contains(".model-preview-trigger"))
+        XCTAssertTrue(shell.contains(".hidden-model-viewer-slot"))
     }
 }

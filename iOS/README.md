@@ -12,7 +12,7 @@ The Android app remains the upstream implementation. This target keeps the same 
 - Reload control and back/forward swipe gestures through `WKWebView`.
 - Console panel with batched injected `console.*` forwarding.
 - Source panel using `document.documentElement.outerHTML`, with local lazy-loaded beautifier/highlighter assets.
-- Network panel using injected `fetch` / `XMLHttpRequest` capture, blob preview storage, and lazy image/model previews with two-finger pan for local model inspection.
+- Network panel using injected `fetch` / `XMLHttpRequest` capture, blob preview storage, and a single full-screen lazy model preview that uses `model-viewer`'s native one-finger orbit and two-finger pan.
 - Three.js panel backed by vendored `threejs-devtools/` assets and iOS chrome-shim routing.
 - Bundle-backed `netex-assets://` scheme for panel, vendor, and Three.js DevTools resources.
 - Debug `WKWebView.isInspectable` support on iOS 16.4+.

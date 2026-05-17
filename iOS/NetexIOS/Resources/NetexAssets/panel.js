@@ -36,111 +36,7 @@
     return loadScript(ASSET_BASE + 'model-viewer.min.js', { type: 'module' }).catch(function () {});
   }
 
-  function touchCentroid(touches) {
-    return {
-      x: (touches[0].clientX + touches[1].clientX) / 2,
-      y: (touches[0].clientY + touches[1].clientY) / 2
-    };
-  }
-
-  function parseMeters(value, fallback) {
-    var parsed = parseFloat(String(value || '').replace('m', ''));
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-
-  function readCameraTarget(mv) {
-    if (typeof mv.getCameraTarget === 'function') {
-      try {
-        var live = mv.getCameraTarget();
-        if (live && Number.isFinite(live.x) && Number.isFinite(live.y) && Number.isFinite(live.z)) {
-          return { x: live.x, y: live.y, z: live.z };
-        }
-      } catch (e) {}
-    }
-
-    var parts = String(mv.getAttribute('camera-target') || '').trim().split(/\s+/);
-    return {
-      x: parseMeters(parts[0], 0),
-      y: parseMeters(parts[1], 0),
-      z: parseMeters(parts[2], 0)
-    };
-  }
-
-  function panScale(mv) {
-    var rect = mv.getBoundingClientRect();
-    var basis = Math.max(1, Math.min(rect.width || 1, rect.height || 1));
-    var radius = 2;
-    if (typeof mv.getCameraOrbit === 'function') {
-      try {
-        var orbit = mv.getCameraOrbit();
-        if (orbit && Number.isFinite(orbit.radius)) radius = Math.max(0.5, orbit.radius);
-      } catch (e) {}
-    }
-    return radius / basis * 1.35;
-  }
-
-  function cameraRight(mv) {
-    var theta = 0;
-    if (typeof mv.getCameraOrbit === 'function') {
-      try {
-        var orbit = mv.getCameraOrbit();
-        if (orbit && Number.isFinite(orbit.theta)) theta = orbit.theta;
-      } catch (e) {}
-    }
-    return { x: Math.cos(theta), z: -Math.sin(theta) };
-  }
-
-  function setCameraTarget(mv, target) {
-    mv.setAttribute(
-      'camera-target',
-      target.x.toFixed(3) + 'm ' + target.y.toFixed(3) + 'm ' + target.z.toFixed(3) + 'm'
-    );
-  }
-
-  function installModelViewerPanGestures(mv) {
-    if (mv.__netexModelPanGestureBound) return;
-    mv.__netexModelPanGestureBound = true;
-
-    var active = false;
-    var last = null;
-    var target = readCameraTarget(mv);
-
-    mv.addEventListener('touchstart', function (event) {
-      if (event.touches.length === 2) {
-        event.preventDefault();
-        active = true;
-        last = touchCentroid(event.touches);
-        target = readCameraTarget(mv);
-        mv.removeAttribute('auto-rotate');
-      }
-    }, { passive: false });
-
-    mv.addEventListener('touchmove', function (event) {
-      if (!active || event.touches.length !== 2) return;
-      event.preventDefault();
-
-      var next = touchCentroid(event.touches);
-      var dx = next.x - last.x;
-      var dy = next.y - last.y;
-      var scale = panScale(mv);
-      var right = cameraRight(mv);
-
-      target.x -= dx * scale * right.x;
-      target.z -= dx * scale * right.z;
-      target.y += dy * scale;
-      setCameraTarget(mv, target);
-      last = next;
-    }, { passive: false });
-
-    ['touchend', 'touchcancel'].forEach(function (name) {
-      mv.addEventListener(name, function (event) {
-        if (event.touches.length < 2) {
-          active = false;
-          last = null;
-        }
-      }, { passive: true });
-    });
-  }
+  var overlayModelViewer = null;
 
   function setTheme(opts) {
     document.documentElement.style.setProperty('--fg', opts.fg);
@@ -235,6 +131,7 @@
       totalCount++;
       bindToggle(det, r.requestId);
     }
+    det.classList.toggle('model-row', isModel(r));
 
     // Track size delta per row so progress ticks update totals without double-counting.
     var lastSize = parseInt(det.dataset.lastSize, 10) || 0;
@@ -274,11 +171,11 @@
     if (!rid) return;
     det.addEventListener('toggle', function () {
       if (!det.open || det.dataset.loaded) return;
-      var media = det.querySelector(':scope > .body > img, :scope > .body > model-viewer');
-      if (!media) return;
+      var image = det.querySelector(':scope > .body > img');
+      if (!image) return;
       det.dataset.loaded = '1';
       requestBlob(rid, function (dataUrl) {
-        if (dataUrl) media.src = dataUrl;
+        if (dataUrl) image.src = dataUrl;
       });
     });
   }
@@ -293,20 +190,78 @@
       return img;
     }
     if (isModel(r)) {
-      var mv = document.createElement('model-viewer');
-      mv.setAttribute('camera-controls', '');
-      mv.setAttribute('auto-rotate', '');
-      mv.setAttribute('camera-orbit', '0deg 75deg auto');
-      mv.setAttribute('camera-target', '0m 0m 0m');
-      mv.setAttribute('interaction-prompt', 'none');
-      mv.setAttribute('touch-action', 'none');
-      mv.style.setProperty('--interaction-prompt-display', 'none');
-      if (!r.requestId) mv.setAttribute('src', r.url);
-      installModelViewerPanGestures(mv);
-      ensureModelViewer();
-      return mv;
+      return buildModelPreviewTrigger(r);
     }
     return null;
+  }
+
+  function buildModelPreviewTrigger(r) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'model-preview-trigger';
+    button.textContent = '3D Preview';
+    button.addEventListener('click', function () {
+      openModelPreview(r);
+    });
+    return button;
+  }
+
+  function hiddenModelViewerSlot(slotName) {
+    var el = document.createElement('span');
+    el.slot = slotName;
+    el.className = 'hidden-model-viewer-slot';
+    el.setAttribute('aria-hidden', 'true');
+    return el;
+  }
+
+  function ensureOverlayModelViewer() {
+    if (overlayModelViewer) return overlayModelViewer;
+    var stage = document.getElementById('modelStage');
+    if (!stage) return null;
+    var mv = document.createElement('model-viewer');
+    mv.className = 'model-preview-host';
+    mv.setAttribute('camera-controls', '');
+    mv.setAttribute('camera-orbit', '0deg 75deg auto');
+    mv.setAttribute('camera-target', '0m 0m 0m');
+    mv.setAttribute('interaction-prompt', 'none');
+    mv.setAttribute('touch-action', 'none');
+    mv.style.setProperty('--interaction-prompt-display', 'none');
+    var panTarget = hiddenModelViewerSlot('pan-target');
+    mv.appendChild(panTarget);
+    var prompt = hiddenModelViewerSlot('interaction-prompt');
+    mv.appendChild(prompt);
+    stage.replaceChildren(mv);
+    overlayModelViewer = mv;
+    ensureModelViewer();
+    return mv;
+  }
+
+  function openModelPreview(r) {
+    var overlay = document.getElementById('modelOverlay');
+    var title = document.getElementById('modelOverlayTitle');
+    var mv = ensureOverlayModelViewer();
+    if (!overlay || !mv) return;
+    if (title) title.textContent = r.displayUrl || r.url || '3D Preview';
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    mv.removeAttribute('src');
+    mv.setAttribute('camera-target', '0m 0m 0m');
+    mv.setAttribute('camera-orbit', '0deg 75deg auto');
+    if (r.requestId) {
+      requestBlob(r.requestId, function (dataUrl) {
+        if (dataUrl && !overlay.hidden) mv.setAttribute('src', dataUrl);
+      });
+    } else {
+      mv.setAttribute('src', r.url);
+    }
+  }
+
+  function closeModelPreview() {
+    var overlay = document.getElementById('modelOverlay');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    if (overlayModelViewer) overlayModelViewer.removeAttribute('src');
   }
 
   function buildText(r) {
@@ -532,6 +487,21 @@
     });
   }
   wireConsolePrompt();
+
+  function wireModelPreviewOverlay() {
+    var close = document.getElementById('modelOverlayClose');
+    var overlay = document.getElementById('modelOverlay');
+    if (close) close.addEventListener('click', closeModelPreview);
+    if (overlay) {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeModelPreview();
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeModelPreview();
+    });
+  }
+  wireModelPreviewOverlay();
 
   window.__panel = {
     setTheme: setTheme,

@@ -62,7 +62,17 @@ code.hljs { background:transparent !important; padding:0 !important; }
 .body { background:transparent; }
 .body pre { margin:0; padding:12px; font-size:11px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; }
 .body img { display:block; margin:0 auto; max-width:100%; height:auto; padding:12px; box-sizing:border-box; background:var(--viewer-bg); }
-.body model-viewer { display:block; width:100%; height:300px; background:var(--viewer-bg); touch-action:none; overscroll-behavior:contain; --interaction-prompt-display:none; }
+.model-preview-trigger { display:flex; align-items:center; justify-content:center; width:100%; min-height:220px; border:0; border-radius:0; background:var(--viewer-bg); color:var(--fg); font:600 13px -apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer; }
+.model-preview-trigger:active { opacity:0.75; }
+.model-overlay[hidden] { display:none !important; }
+.model-overlay { position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; background:var(--viewer-bg); color:var(--fg); }
+.model-overlay-toolbar { flex:0 0 44px; display:flex; align-items:center; gap:8px; padding:0 10px; background:var(--panel-bg); border-bottom:1px solid rgba(127,127,127,0.24); box-sizing:border-box; }
+.model-overlay-toolbar span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; opacity:0.82; }
+.model-overlay-toolbar button { flex:0 0 34px; width:34px; height:34px; border:0; border-radius:17px; background:rgba(127,127,127,0.18); color:var(--fg); font:600 16px -apple-system,BlinkMacSystemFont,sans-serif; }
+.model-overlay-stage { flex:1; min-height:0; overflow:hidden; background:var(--viewer-bg); touch-action:none; }
+.model-overlay-stage model-viewer,
+.model-preview-host { display:block; width:100%; height:100%; min-height:0; background:var(--viewer-bg); touch-action:none; overscroll-behavior:contain; --interaction-prompt-display:none; }
+.hidden-model-viewer-slot { display:none !important; width:0 !important; height:0 !important; opacity:0 !important; pointer-events:none !important; }
 </style>
 </head>
 <body>
@@ -72,6 +82,10 @@ code.hljs { background:transparent !important; padding:0 !important; }
 </div>
 <div id="source-tab"><pre><code class="language-html"></code></pre></div>
 <div id="network-tab"><div class="net-totals" id="netTotals"><span class="method"></span><span class="url" id="netTotalsCount"></span><span class="size" id="netTotalsSize"></span><span class="status"></span></div><p class="empty">No requests captured yet.</p></div>
+<div id="modelOverlay" class="model-overlay" hidden aria-hidden="true">
+  <div class="model-overlay-toolbar"><span id="modelOverlayTitle">3D Preview</span><button id="modelOverlayClose" type="button" aria-label="Close model preview">x</button></div>
+  <div id="modelStage" class="model-overlay-stage"></div>
+</div>
 <!--__PANEL_JS__-->
 </body>
 </html>
