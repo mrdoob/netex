@@ -15,7 +15,7 @@ This branch adds an iPhone-capable Netex target without changing the Android app
 ## Tests And Verification
 
 - Unit coverage includes URL/search resolution, offline asset presence, shim mode parsing, script injection order, bridge envelope decoding, console/network batching, blob FIFO eviction, and extension port replay.
-- UI coverage launches the local start page, switches Console/Source/Network/Three.js tabs, and verifies the Three.js panel surface exists.
+- UI coverage launches the local start page, verifies the curated Examples menu and hidden custom URL flow, switches Console/Source/Network/Three.js tabs, verifies inspector hide/show, and verifies the Three.js panel surface exists.
 - Simulator profiling can be reproduced with:
 
 ```sh
@@ -33,14 +33,16 @@ xcrun devicectl device install app --device <COREDEVICE_ID> ../../artifacts/Devi
 xcrun devicectl device process launch --device <COREDEVICE_ID> <YOUR_BUNDLE_ID>
 ```
 
-`COPYFILE_DISABLE=1` is included because macOS resource fork or Finder metadata on copied bundle resources can make iOS codesign reject an otherwise valid development build. Do not commit personal development teams, bundle IDs, or provisioning profiles.
+`Scripts/build_device.sh` wraps this workflow for local development. It keeps signing values in the environment, strips macOS bundle metadata if codesign rejects an otherwise valid build, verifies the signed app, installs when `COREDEVICE_ID` is supplied, and writes receipt logs under `artifacts/`. Do not commit personal development teams, bundle IDs, or provisioning profiles.
 
 ## Third-Party Asset Licenses
 
-- `highlight.js`: BSD-3-Clause, npm latest checked as `11.11.1`.
-- `js-beautify`: MIT, npm latest checked as `1.15.4`.
-- `@google/model-viewer`: Apache-2.0, npm latest checked as `4.2.0`.
+- `highlight.js`: BSD-3-Clause, bundled version checked as `11.11.1`.
+- `js-beautify`: MIT, bundled version checked as `1.15.4`.
+- `@google/model-viewer`: Apache-2.0, bundled version checked as `4.2.0`.
 - `threejs-devtools/` is kept as vendored DevTools code from the existing Netex/Three.js ecosystem and should remain isolated from app-specific edits where possible.
+
+See `THIRD_PARTY_NOTICES.md` for the iOS bundle notice surface.
 
 ## Known Deltas
 

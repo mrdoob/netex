@@ -36,14 +36,13 @@ final class BrowserViewController: UIViewController {
 
     private struct Example {
         let title: String
-        let subtitle: String
         let urlString: String
     }
 
     private let examples: [Example] = [
-        Example(title: "Examples", subtitle: "Gallery index", urlString: "https://threejs.org/examples/"),
-        Example(title: "Animated Model", subtitle: "Animation/keyframe detection", urlString: "https://threejs.org/examples/#webgl_animation_keyframes"),
-        Example(title: "glTF Loader", subtitle: "Model and network preview", urlString: "https://threejs.org/examples/#webgl_loader_gltf")
+        Example(title: "Examples", urlString: "https://threejs.org/examples/"),
+        Example(title: "Animated Model", urlString: "https://threejs.org/examples/#webgl_animation_keyframes"),
+        Example(title: "glTF Loader", urlString: "https://threejs.org/examples/#webgl_loader_gltf")
     ]
 
     private lazy var consoleBatcher = MessageBatcher<ConsoleEntry>(maxBatchSize: 32, delay: 0.05) { [weak self] batch in
@@ -324,7 +323,7 @@ final class BrowserViewController: UIViewController {
     private func makeExamplesMenu() -> UIMenu {
         let exampleActions = examples.compactMap { example -> UIAction? in
             guard let url = URL(string: example.urlString) else { return nil }
-            return UIAction(title: example.title, subtitle: example.subtitle) { [weak self] _ in
+            return UIAction(title: example.title) { [weak self] _ in
                 self?.customMainFrameHost = nil
                 self?.load(url)
             }

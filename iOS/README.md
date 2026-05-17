@@ -7,7 +7,8 @@ The Android app remains the upstream implementation. This target keeps the same 
 ## Status
 
 - Local Netex start page instead of a remote default launch URL.
-- Browser URL/search bar with persisted last URL.
+- Focused top chrome with Home, page title, Reload, and an Examples menu.
+- Curated Three.js entry points for the examples gallery, animated model, and glTF loader, with custom URL entry kept in the advanced menu.
 - Reload control and back/forward swipe gestures through `WKWebView`.
 - Console panel with batched injected `console.*` forwarding.
 - Source panel using `document.documentElement.outerHTML`, with local lazy-loaded beautifier/highlighter assets.
@@ -28,7 +29,7 @@ xcodegen generate
 xcodebuild test -project NetexIOS.xcodeproj -scheme NetexIOS -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-The test suite covers URL/search resolution, bundle asset loading, shim mode parsing, bridge envelope decoding, console/network batching, blob FIFO eviction, extension port replay, and a UI smoke test that launches the local start page and switches all panel tabs.
+The test suite covers URL/search resolution, bundle asset loading, shim mode parsing, bridge envelope decoding, console/network batching, blob FIFO eviction, extension port replay, and UI smoke tests for the local start page, examples menu, hidden custom URL flow, inspector hide/show, and all panel tabs.
 
 To install and launch the simulator build manually:
 
@@ -85,12 +86,20 @@ For a local development install, pass your own Apple development team and a bund
 
 ```sh
 cd iOS/NetexIOS
-COPYFILE_DISABLE=1 xcodebuild -project NetexIOS.xcodeproj -scheme NetexIOS -configuration Debug -destination 'id=<DEVICE_UDID>' -derivedDataPath ../../artifacts/DeviceDerivedData -allowProvisioningUpdates -allowProvisioningDeviceRegistration build DEVELOPMENT_TEAM=<TEAM_ID> PRODUCT_BUNDLE_IDENTIFIER=<YOUR_BUNDLE_ID>
-xcrun devicectl device install app --device <COREDEVICE_ID> ../../artifacts/DeviceDerivedData/Build/Products/Debug-iphoneos/NetexIOS.app
-xcrun devicectl device process launch --device <COREDEVICE_ID> <YOUR_BUNDLE_ID>
+DEVELOPMENT_TEAM=<TEAM_ID> \
+PRODUCT_BUNDLE_IDENTIFIER=<YOUR_BUNDLE_ID> \
+DEVICE_UDID=<DEVICE_UDID> \
+COREDEVICE_ID=<COREDEVICE_ID> \
+Scripts/build_device.sh
 ```
 
-Use `xcodebuild -showdestinations -project NetexIOS.xcodeproj -scheme NetexIOS` for the Xcode device UDID and `xcrun devicectl list devices` for the CoreDevice install/launch id. `COPYFILE_DISABLE=1` prevents macOS resource fork or Finder metadata from being copied into the app bundle and rejected by codesign. The project defaults stay neutral for upstream review. Do not commit personal team IDs, provisioning profiles, or local bundle IDs.
+Use `xcodebuild -showdestinations -project NetexIOS.xcodeproj -scheme NetexIOS` for the Xcode device UDID and `xcrun devicectl list devices` for the CoreDevice install/launch id. The helper keeps upstream signing defaults neutral, builds with command-line signing overrides, strips macOS bundle metadata if codesign rejects it, verifies the signed app, installs when `COREDEVICE_ID` is set, and writes receipts under `artifacts/`. Do not commit personal team IDs, provisioning profiles, or local bundle IDs.
+
+For the underlying command-line shape without the helper, see `PR_NOTES.md`.
+
+## Third-Party Notices
+
+The iOS target bundles local inspector assets to avoid first-run CDN fetches. See `THIRD_PARTY_NOTICES.md` for bundled dependency sources, versions checked, and license notes.
 
 ## Known Deltas
 

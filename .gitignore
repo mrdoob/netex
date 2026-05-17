@@ -13,3 +13,4 @@ captures/
 *.ap_
 *.xcuserstate
 *.xcuserdatad/
+artifacts/

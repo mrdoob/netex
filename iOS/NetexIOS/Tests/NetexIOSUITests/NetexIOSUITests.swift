@@ -19,6 +19,21 @@ final class NetexIOSUITests: XCTestCase {
         tabs.buttons["Console"].tap()
     }
 
+    func testExamplesMenuKeepsCustomURLAdvanced() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--netex-reset"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Netex"].waitForExistence(timeout: 5))
+        app.buttons["netex.examples"].tap()
+
+        XCTAssertTrue(app.buttons["Examples"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["Animated Model"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["glTF Loader"].exists)
+        XCTAssertTrue(app.buttons["Open Custom URL..."].exists)
+        XCTAssertFalse(app.textFields["netex.address"].exists)
+    }
+
     func testThreeTabExposesPanelSurface() {
         let app = XCUIApplication()
         app.launchArguments = ["--netex-reset"]
