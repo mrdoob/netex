@@ -138,7 +138,7 @@
 
   function renderSourceFindHighlights() {
     if (sourceEditMode) {
-      renderSourceEditorHighlight();
+      return;
     } else {
       renderSourceCode(document.querySelector('#source-tab .source-view code'), sourceDisplayText, true);
     }
@@ -168,12 +168,6 @@
   function scrollActiveSourceMatch() {
     var active = document.querySelector('#source-tab .source-find-current');
     if (sourceEditMode) {
-      var editor = document.getElementById('sourceEditor');
-      if (active && editor) {
-        editor.scrollTop = Math.max(0, active.offsetTop - (editor.clientHeight * 0.38));
-        editor.scrollLeft = Math.max(0, active.offsetLeft - (editor.clientWidth * 0.25));
-      }
-      syncSourceEditorScroll();
       return;
     }
     if (active) active.scrollIntoView({ block: 'center', inline: 'center' });
@@ -245,7 +239,6 @@
       sourceDirty = false;
       sourceApplying = false;
       setSourceStatus('Editing live-session source. Apply rewrites this page only.');
-      renderSourceEditorHighlight();
       requestInspectorResize('source-edit');
       setTimeout(function () { editor.focus(); }, 0);
     } else {
@@ -796,7 +789,7 @@
       sourceDirty = true;
       setSourceStatus('Editing live-session source.');
       updateSourceButtons();
-      renderSourceEditorHighlight();
+      if (!sourceEditMode) renderSourceEditorHighlight();
       refreshSourceFind(false);
     });
     editor.addEventListener('scroll', syncSourceEditorScroll);

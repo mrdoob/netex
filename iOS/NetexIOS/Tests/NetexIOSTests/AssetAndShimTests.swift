@@ -133,16 +133,18 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(script.contains("sourceFindMatches"))
     }
 
-    func testSourceEditModeKeepsSyntaxHighlightedOverlay() {
+    func testSourceEditModeUsesVisibleNativeTextareaForEditingCorrectness() {
         let script = AssetLoader.text("panel", ext: "js")
         let shell = AssetLoader.text("panel-shell", ext: "html")
 
         XCTAssertTrue(shell.contains("sourceEditorWrap"))
         XCTAssertTrue(shell.contains("sourceEditorHighlight"))
         XCTAssertTrue(shell.contains("#source-tab.editing .source-editor-wrap { display:block;"))
-        XCTAssertTrue(shell.contains("-webkit-text-fill-color:transparent;"))
+        XCTAssertTrue(shell.contains("#source-tab.editing .source-editor-highlight { display:none;"))
+        XCTAssertTrue(shell.contains("color:var(--fg); -webkit-text-fill-color:var(--fg);"))
+        XCTAssertFalse(shell.contains("-webkit-text-fill-color:transparent;"))
         XCTAssertTrue(shell.contains(".source-editor-highlight"))
-        XCTAssertTrue(script.contains("renderSourceEditorHighlight"))
+        XCTAssertTrue(script.contains("if (!sourceEditMode) renderSourceEditorHighlight();"))
         XCTAssertTrue(script.contains("syncSourceEditorScroll"))
         XCTAssertTrue(script.contains("sourceEditorHighlight"))
     }
@@ -169,12 +171,13 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(shell.contains("overflow-x:auto;"))
     }
 
-    func testSourceFindScrollsEditModeToVisibleHighlightedMark() {
+    func testSourceFindInEditModeUsesNativeTextareaSelection() {
         let script = AssetLoader.text("panel", ext: "js")
 
-        XCTAssertTrue(script.contains("active.offsetTop"))
-        XCTAssertTrue(script.contains("active.offsetLeft"))
-        XCTAssertTrue(script.contains("editor.scrollTop = Math.max(0, active.offsetTop"))
-        XCTAssertTrue(script.contains("editor.scrollLeft = Math.max(0, active.offsetLeft"))
+        XCTAssertTrue(script.contains("editor.setSelectionRange(start, end)"))
+        XCTAssertTrue(script.contains("scrollEditorToOffset(start)"))
+        XCTAssertTrue(script.contains("if (sourceEditMode && editor) {"))
+        XCTAssertFalse(script.contains("editor.scrollTop = Math.max(0, active.offsetTop"))
+        XCTAssertFalse(script.contains("editor.scrollLeft = Math.max(0, active.offsetLeft"))
     }
 }
