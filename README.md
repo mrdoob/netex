@@ -1,14 +1,16 @@
 # Netex Browser
 
 A minimal Android browser with a built-in devtools panel. Drag up the
-bottom bar to see the page's source and a live network log (fetch, XHR,
-images, HTML, with inline image and glTF previews).
+bottom bar to open it — four tabs:
 
-The vendored [Three.js DevTools](https://github.com/mrdoob/three.js/tree/dev/devtools)
-Chrome extension runs in-process via a minimum `chrome.*` shim — its
-background script drives the revision badge on the logo, and its panel
-UI is mounted as a third tab (Source / Network / Three.js) in the
-bottom panel.
+- **Console** — live page logs plus a JS prompt that evaluates in
+  the page's global scope.
+- **Source** — formatted page HTML.
+- **Network** — fetch/XHR log with inline image / glTF previews.
+- **Three.js** — the vendored
+  [Three.js DevTools](https://github.com/mrdoob/three.js/tree/dev/devtools)
+  Chrome extension running in-process via a minimum `chrome.*` shim.
+  Its background script drives the revision badge on the logo.
 
 ## Install
 
