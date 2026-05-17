@@ -1,10 +1,14 @@
 package com.mrdoob.browser
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.os.Message
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -28,11 +32,32 @@ fun setupThreeJsPanel(context: Context, view: WebView, bridge: PanelExtensionBri
     view.settings.domStorageEnabled = true
     view.settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
     view.settings.allowFileAccess = true
+    view.settings.setSupportMultipleWindows(true)
     view.webChromeClient = object : WebChromeClient() {
         override fun onConsoleMessage(message: ConsoleMessage): Boolean {
             if (BuildConfig.DEBUG) {
                 Log.d("ThreeJsPanelConsole", "${message.messageLevel()} ${message.message()} (${message.sourceId()}:${message.lineNumber()})")
             }
+            return true
+        }
+
+        // target="_blank" links (e.g. the panel's feedback "+") would otherwise
+        // be no-ops; route them through a one-shot WebView whose only job is to
+        // catch the requested URL and hand it to the OS browser.
+        override fun onCreateWindow(
+            parent: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message
+        ): Boolean {
+            val transient = WebView(parent.context)
+            transient.webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
+                    val intent = Intent(Intent.ACTION_VIEW, request.url)
+                    try { parent.context.startActivity(intent) } catch (_: ActivityNotFoundException) {}
+                    v.destroy()
+                    return true
+                }
+            }
+            (resultMsg.obj as WebView.WebViewTransport).webView = transient
+            resultMsg.sendToTarget()
             return true
         }
     }
