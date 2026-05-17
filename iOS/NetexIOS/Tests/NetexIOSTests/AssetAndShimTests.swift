@@ -105,4 +105,16 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(script.contains("postPanelEval"))
         XCTAssertTrue(script.contains("document.open();document.write(html);document.close()"))
     }
+
+    func testSourcePanelUsesDenseIDELikeCodeLayout() {
+        let shell = AssetLoader.text("panel-shell", ext: "html")
+
+        XCTAssertTrue(shell.contains("content=\"width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover\""))
+        XCTAssertTrue(shell.contains("body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--fg); background:var(--panel-bg);"))
+        XCTAssertTrue(shell.contains("#source-tab .source-view { flex:1; min-height:0; overflow:auto; background:var(--panel-bg);"))
+        XCTAssertTrue(shell.contains("#source-tab pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:2;"))
+        XCTAssertTrue(shell.contains("#sourceEditor { display:none; flex:1; min-height:0; box-sizing:border-box; width:100%; resize:none; border:0; outline:none; padding:12px; background:var(--panel-bg);"))
+        XCTAssertTrue(shell.contains("white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2; -webkit-text-size-adjust:100%;"))
+        XCTAssertTrue(shell.contains("-webkit-appearance:none; caret-color:#93c5fd;"))
+    }
 }

@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <link rel="stylesheet" id="hljs-theme" href="">
 <style>
 :root {
@@ -9,7 +9,7 @@
     --panel-bg: #1f1f23;
     --viewer-bg: #2c2c30;
 }
-body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--fg); }
+body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--fg); background:var(--panel-bg); }
 
 #console-tab, #source-tab, #network-tab { display: none; }
 #source-tab.active, #network-tab.active { display: block; }
@@ -35,9 +35,10 @@ body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--
 #source-tab .source-toolbar button { border:0; border-radius:4px; padding:5px 9px; background:rgba(127,127,127,0.2); color:var(--fg); font:600 12px -apple-system,BlinkMacSystemFont,sans-serif; }
 #source-tab .source-toolbar button:disabled { opacity:0.42; }
 #sourceStatus { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:0.65; font-size:11px; }
-#source-tab .source-view { flex:1; min-height:0; overflow:auto; }
-#source-tab pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; }
-#sourceEditor { display:none; flex:1; min-height:0; box-sizing:border-box; width:100%; resize:none; border:0; outline:none; padding:12px; background:transparent; color:var(--fg); font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; }
+#source-tab .source-view { flex:1; min-height:0; overflow:auto; background:var(--panel-bg); }
+#source-tab pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:2; }
+#source-tab code { display:block; min-width:max-content; }
+#sourceEditor { display:none; flex:1; min-height:0; box-sizing:border-box; width:100%; resize:none; border:0; outline:none; padding:12px; background:var(--panel-bg); color:var(--fg); font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2; -webkit-text-size-adjust:100%; -webkit-appearance:none; caret-color:#93c5fd; }
 #source-tab.editing .source-view { display:none; }
 #source-tab.editing #sourceEditor { display:block; }
 code.hljs { background:transparent !important; padding:0 !important; }
