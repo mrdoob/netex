@@ -58,6 +58,17 @@
   var sourceDirty = false;
   var sourceApplying = false;
   var sourceVersion = 0;
+  var sourceFindMatches = [];
+  var sourceFindIndex = -1;
+
+  function requestInspectorResize(mode) {
+    try {
+      AndroidPanel.postMessage(JSON.stringify({
+        type: 'inspector.resize',
+        payload: { mode: mode || 'normal' }
+      }));
+    } catch (e) {}
+  }
 
   function setSource(html) {
     sourceRaw = html || '';
@@ -107,7 +118,10 @@
     var edit = document.getElementById('sourceEdit');
     var apply = document.getElementById('sourceApply');
     var revert = document.getElementById('sourceRevert');
-    if (edit) edit.disabled = sourceEditMode;
+    if (edit) {
+      edit.disabled = sourceApplying;
+      edit.textContent = sourceEditMode ? 'Done' : 'Edit';
+    }
     if (apply) apply.disabled = sourceApplying || !sourceEditMode || !sourceDirty;
     if (revert) revert.disabled = sourceApplying || !sourceEditMode;
   }
@@ -124,12 +138,15 @@
       sourceDirty = false;
       sourceApplying = false;
       setSourceStatus('Editing live-session source. Apply rewrites this page only.');
+      requestInspectorResize('source-edit');
       setTimeout(function () { editor.focus(); }, 0);
     } else {
       sourceDirty = false;
       setSourceStatus('Read-only snapshot');
+      requestInspectorResize('normal');
     }
     updateSourceButtons();
+    refreshSourceFind(true);
   }
 
   function sourceWriteScript(html) {
@@ -552,14 +569,60 @@
         sourceRaw = document.getElementById('sourceEditor') ? document.getElementById('sourceEditor').value : sourceRaw;
         sourceDirty = false;
         setSourceStatus(target === 'source-apply' ? 'Applied to live page.' : 'Reverted to edit checkpoint.');
-        updateSourceButtons();
       } else {
         setSourceStatus((target === 'source-apply' ? 'Apply' : 'Revert') + ' failed: ' + String(parsed[1]));
-        updateSourceButtons();
       }
+      updateSourceButtons();
       return;
     }
     appendConsoleEntry({ level: parsed[0] ? 'result' : 'result_error', message: String(parsed[1]) });
+  }
+
+  function refreshSourceFind(reset) {
+    var input = document.getElementById('sourceFind');
+    var count = document.getElementById('sourceFindCount');
+    var editor = document.getElementById('sourceEditor');
+    var query = input ? input.value : '';
+    var text = editor ? editor.value : sourceRaw;
+    sourceFindMatches = [];
+    sourceFindIndex = reset ? -1 : sourceFindIndex;
+    if (!query) {
+      if (count) count.textContent = '0/0';
+      return;
+    }
+    var haystack = text.toLowerCase();
+    var needle = query.toLowerCase();
+    var from = 0;
+    while (needle && from <= haystack.length) {
+      var found = haystack.indexOf(needle, from);
+      if (found === -1) break;
+      sourceFindMatches.push(found);
+      from = found + Math.max(needle.length, 1);
+    }
+    if (sourceFindIndex >= sourceFindMatches.length) sourceFindIndex = sourceFindMatches.length - 1;
+    if (count) count.textContent = sourceFindMatches.length ? Math.max(sourceFindIndex + 1, 0) + '/' + sourceFindMatches.length : '0/0';
+  }
+
+  function selectSourceMatch(direction) {
+    var input = document.getElementById('sourceFind');
+    var editor = document.getElementById('sourceEditor');
+    if (!input || !editor || !input.value) return;
+    if (!sourceEditMode) setSourceEditing(true);
+    refreshSourceFind(false);
+    if (!sourceFindMatches.length) return;
+    sourceFindIndex = sourceFindIndex === -1
+      ? (direction < 0 ? sourceFindMatches.length - 1 : 0)
+      : (sourceFindIndex + direction + sourceFindMatches.length) % sourceFindMatches.length;
+    var start = sourceFindMatches[sourceFindIndex];
+    var end = start + input.value.length;
+    editor.focus();
+    editor.setSelectionRange(start, end);
+    var count = document.getElementById('sourceFindCount');
+    if (count) count.textContent = (sourceFindIndex + 1) + '/' + sourceFindMatches.length;
+  }
+
+  function findInSource(direction) {
+    selectSourceMatch(direction || 1);
   }
 
   function wireConsoleScroll() {
@@ -608,15 +671,30 @@
     var apply = document.getElementById('sourceApply');
     var revert = document.getElementById('sourceRevert');
     var editor = document.getElementById('sourceEditor');
+    var find = document.getElementById('sourceFind');
+    var prev = document.getElementById('sourceFindPrev');
+    var next = document.getElementById('sourceFindNext');
     if (!edit || !apply || !revert || !editor) return;
-    edit.addEventListener('click', function () { setSourceEditing(true); });
+    edit.addEventListener('click', function () { setSourceEditing(!sourceEditMode); });
     apply.addEventListener('click', applySourceEdit);
     revert.addEventListener('click', revertSourceEdit);
     editor.addEventListener('input', function () {
       sourceDirty = true;
       setSourceStatus('Editing live-session source.');
       updateSourceButtons();
+      refreshSourceFind(false);
     });
+    if (find) {
+      find.addEventListener('input', function () { refreshSourceFind(true); });
+      find.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          findInSource(e.shiftKey ? -1 : 1);
+        }
+      });
+    }
+    if (prev) prev.addEventListener('click', function () { findInSource(-1); });
+    if (next) next.addEventListener('click', function () { findInSource(1); });
   }
   wireSourceEditor();
 

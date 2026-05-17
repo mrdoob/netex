@@ -82,4 +82,17 @@ final class BridgeEnvelopeTests: XCTestCase {
         XCTAssertEqual(envelope.id, "source-apply-1")
         XCTAssertEqual(envelope.payload["source"] as? String, "document.title")
     }
+
+    func testEnvelopeDecodesInspectorResizeRequest() throws {
+        let body: [String: Any] = [
+            "type": "inspector.resize",
+            "source": "panel",
+            "payload": ["mode": "source-edit"]
+        ]
+
+        let envelope = try XCTUnwrap(BridgeEnvelope(body))
+
+        XCTAssertEqual(envelope.type, .inspectorResize)
+        XCTAssertEqual(envelope.payload["mode"] as? String, "source-edit")
+    }
 }

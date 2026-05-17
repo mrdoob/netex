@@ -8,6 +8,7 @@ enum BridgeEnvelopeType: String, Equatable {
     case panelEval = "panel-eval"
     case fetchBlob = "fetch-blob"
     case blobResponse = "blob-response"
+    case inspectorResize = "inspector.resize"
     case perfMark = "perf.mark"
     case pageReady = "page-ready"
     case extensionPortConnect = "port-connect"

@@ -31,14 +31,17 @@ body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--
 #console-tab .prompt input { flex:1; background:transparent; border:none; outline:none; color:inherit; font:12px ui-monospace,SFMono-Regular,Menlo,monospace; padding:2px 0; }
 
 #source-tab.active { display:flex; flex-direction:column; position:absolute; inset:0; }
-#source-tab .source-toolbar { display:flex; align-items:center; gap:8px; padding:6px 12px; background:var(--panel-bg); border-bottom:1px solid rgba(127,127,127,0.2); flex-shrink:0; }
-#source-tab .source-toolbar button { border:0; border-radius:4px; padding:5px 9px; background:rgba(127,127,127,0.2); color:var(--fg); font:600 12px -apple-system,BlinkMacSystemFont,sans-serif; }
+#source-tab .source-toolbar { display:flex; flex-direction:column; gap:5px; padding:6px 8px; background:var(--panel-bg); border-bottom:1px solid rgba(127,127,127,0.2); flex-shrink:0; }
+#source-tab .source-actions, #source-tab .source-find { display:flex; align-items:center; gap:6px; min-width:0; }
+#source-tab .source-toolbar button { border:0; border-radius:4px; padding:4px 8px; background:rgba(127,127,127,0.2); color:var(--fg); font:600 11px -apple-system,BlinkMacSystemFont,sans-serif; }
 #source-tab .source-toolbar button:disabled { opacity:0.42; }
 #sourceStatus { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:0.65; font-size:11px; }
+#sourceFind { flex:1; min-width:0; height:24px; box-sizing:border-box; border:1px solid rgba(127,127,127,0.28); border-radius:4px; padding:2px 7px; background:rgba(0,0,0,0.18); color:var(--fg); font:11px ui-monospace,SFMono-Regular,Menlo,monospace; outline:none; }
+#sourceFindCount { flex:0 0 42px; text-align:right; opacity:0.6; font:10px ui-monospace,SFMono-Regular,Menlo,monospace; }
 #source-tab .source-view { flex:1; min-height:0; overflow:auto; background:var(--panel-bg); }
-#source-tab pre { margin:0; padding:12px; font-size:12px; line-height:1.45; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:2; }
+#source-tab pre { margin:0; padding:6px 8px; font-size:10.5px; line-height:1.22; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:2; }
 #source-tab code { display:block; min-width:max-content; }
-#sourceEditor { display:none; flex:1; min-height:0; box-sizing:border-box; width:100%; resize:none; border:0; outline:none; padding:12px; background:var(--panel-bg); color:var(--fg); font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2; -webkit-text-size-adjust:100%; -webkit-appearance:none; caret-color:#93c5fd; }
+#sourceEditor { display:none; flex:1; min-height:0; box-sizing:border-box; width:100%; resize:none; border:0; outline:none; padding:6px 8px; background:var(--panel-bg); color:var(--fg); font:10.5px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2; -webkit-text-size-adjust:100%; -webkit-appearance:none; caret-color:#93c5fd; }
 #source-tab.editing .source-view { display:none; }
 #source-tab.editing #sourceEditor { display:block; }
 code.hljs { background:transparent !important; padding:0 !important; }
@@ -91,7 +94,10 @@ code.hljs { background:transparent !important; padding:0 !important; }
   <form class="prompt" id="consolePrompt"><span>❯</span><input id="consoleInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /></form>
 </div>
 <div id="source-tab">
-  <div class="source-toolbar"><button id="sourceEdit" type="button">Edit</button><button id="sourceApply" type="button" disabled>Apply</button><button id="sourceRevert" type="button" disabled>Revert</button><span id="sourceStatus">Read-only snapshot</span></div>
+  <div class="source-toolbar">
+    <div class="source-actions"><button id="sourceEdit" type="button">Edit</button><button id="sourceApply" type="button" disabled>Apply</button><button id="sourceRevert" type="button" disabled>Revert</button><span id="sourceStatus">Read-only snapshot</span></div>
+    <div class="source-find"><input id="sourceFind" type="search" placeholder="Find" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" /><button id="sourceFindPrev" type="button" aria-label="Previous match">↑</button><button id="sourceFindNext" type="button" aria-label="Next match">↓</button><span id="sourceFindCount">0/0</span></div>
+  </div>
   <div class="source-view"><pre><code class="language-html"></code></pre></div>
   <textarea id="sourceEditor" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
 </div>

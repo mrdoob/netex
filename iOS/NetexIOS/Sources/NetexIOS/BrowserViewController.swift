@@ -388,6 +388,32 @@ final class BrowserViewController: UIViewController {
         }
     }
 
+    private func setPanelHeight(_ height: CGFloat, animated: Bool = true) {
+        let minHeight: CGFloat = 120
+        let maxHeight = max(minHeight, view.bounds.height - 180)
+        let changes = {
+            self.panelHeightConstraint.constant = min(max(height, minHeight), maxHeight)
+            self.view.layoutIfNeeded()
+        }
+
+        if animated {
+            UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut], animations: changes)
+        } else {
+            changes()
+        }
+    }
+
+    private func handleInspectorResize(_ envelope: BridgeEnvelope) {
+        let mode = envelope.payload["mode"] as? String ?? "normal"
+        switch mode {
+        case "source-edit":
+            setInspectorHidden(false)
+            setPanelHeight(view.bounds.height * 0.72)
+        default:
+            setPanelHeight(defaultPanelHeight)
+        }
+    }
+
     private func showBlockedNavigation(_ url: URL?) {
         let host = url?.host ?? "external page"
         blockedNavigationLabel.text = "Blocked external navigation to \(host). Use Home to return to Netex."
@@ -476,6 +502,8 @@ final class BrowserViewController: UIViewController {
                     pageView.evaluateJavaScript("window.__netex && window.__netex.findBlob(\(JSONBridge.quoted(rid)))")
                 }
             }
+        case .inspectorResize:
+            handleInspectorResize(envelope)
         case .panelEval:
             handlePanelEval(envelope)
         case .perfMark:
