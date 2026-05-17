@@ -245,6 +245,9 @@
   var history = [];
   var historyCursor = -1;
   var draft = '';
+  var consoleLogCount = 0;
+  var consoleWarnCount = 0;
+  var consoleErrorCount = 0;
   // Track via scroll-event rather than reading scrollTop on every append; per-log
   // layout flush gets expensive when chatty pages spam console.log.
   var consoleScrolledUp = false;
@@ -312,7 +315,17 @@
 
     entries.appendChild(div);
     while (entries.childElementCount > MAX_CONSOLE_ENTRIES) entries.firstElementChild.remove();
+    if (r.level === 'warn') consoleWarnCount++;
+    else if (r.level === 'error' || r.level === 'result_error') consoleErrorCount++;
+    else if (r.level !== 'input' && r.level !== 'result') consoleLogCount++;
+    updateConsoleTotals();
     if (!consoleScrolledUp) entries.scrollTop = entries.scrollHeight;
+  }
+
+  function updateConsoleTotals() {
+    document.getElementById('consoleLogTotal').textContent = '≡ ' + consoleLogCount;
+    document.getElementById('consoleWarnTotal').textContent = '⚠ ' + consoleWarnCount;
+    document.getElementById('consoleErrorTotal').textContent = '✕ ' + consoleErrorCount;
   }
 
   function shortenSource(src) {
@@ -323,6 +336,10 @@
   function clearConsole() {
     document.getElementById('consoleEntries').replaceChildren();
     consoleScrolledUp = false;
+    consoleLogCount = 0;
+    consoleWarnCount = 0;
+    consoleErrorCount = 0;
+    updateConsoleTotals();
   }
 
   function submitEval(source) {
