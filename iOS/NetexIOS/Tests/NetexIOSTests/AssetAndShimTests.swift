@@ -66,4 +66,13 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertEqual(NetexShimMode(rawValue: "full"), .full)
         XCTAssertEqual(NetexShimMode(rawValue: "unknown"), .full)
     }
+
+    func testPanelInstallsTwoFingerModelViewerOrbitGesture() {
+        let script = AssetLoader.text("panel", ext: "js")
+
+        XCTAssertTrue(script.contains("installModelViewerGestures"))
+        XCTAssertTrue(script.contains("__netexModelGestureBound"))
+        XCTAssertTrue(script.contains("touches.length === 2"))
+        XCTAssertTrue(script.contains("camera-orbit"))
+    }
 }

@@ -36,6 +36,80 @@
     return loadScript(ASSET_BASE + 'model-viewer.min.js', { type: 'module' }).catch(function () {});
   }
 
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function parseAngle(value, fallback) {
+    var parsed = parseFloat(String(value || '').replace('deg', ''));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function parseOrbit(value) {
+    var parts = String(value || '').trim().split(/\s+/);
+    return {
+      theta: parseAngle(parts[0], 0),
+      phi: parseAngle(parts[1], 75),
+      radius: parts[2] || 'auto'
+    };
+  }
+
+  function touchCentroid(touches) {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2
+    };
+  }
+
+  function setOrbit(mv, orbit) {
+    mv.setAttribute(
+      'camera-orbit',
+      orbit.theta.toFixed(1) + 'deg ' + orbit.phi.toFixed(1) + 'deg ' + orbit.radius
+    );
+  }
+
+  function installModelViewerGestures(mv) {
+    if (mv.__netexModelGestureBound) return;
+    mv.__netexModelGestureBound = true;
+
+    var active = false;
+    var last = null;
+    var orbit = parseOrbit(mv.getAttribute('camera-orbit'));
+
+    mv.addEventListener('touchstart', function (event) {
+      if (event.touches.length === 2) {
+        event.preventDefault();
+        active = true;
+        last = touchCentroid(event.touches);
+        orbit = parseOrbit(mv.getAttribute('camera-orbit'));
+        mv.removeAttribute('auto-rotate');
+      }
+    }, { passive: false });
+
+    mv.addEventListener('touchmove', function (event) {
+      if (!active || event.touches.length !== 2) return;
+      event.preventDefault();
+
+      var next = touchCentroid(event.touches);
+      var dx = next.x - last.x;
+      var dy = next.y - last.y;
+
+      orbit.theta += dx * 0.35;
+      orbit.phi = clamp(orbit.phi + dy * 0.25, 10, 170);
+      setOrbit(mv, orbit);
+      last = next;
+    }, { passive: false });
+
+    ['touchend', 'touchcancel'].forEach(function (name) {
+      mv.addEventListener(name, function (event) {
+        if (event.touches.length < 2) {
+          active = false;
+          last = null;
+        }
+      }, { passive: true });
+    });
+  }
+
   function setTheme(opts) {
     document.documentElement.style.setProperty('--fg', opts.fg);
     document.documentElement.style.setProperty('--panel-bg', opts.panelBg);
@@ -190,8 +264,10 @@
       var mv = document.createElement('model-viewer');
       mv.setAttribute('camera-controls', '');
       mv.setAttribute('auto-rotate', '');
-      mv.setAttribute('touch-action', 'pan-y');
+      mv.setAttribute('camera-orbit', '0deg 75deg auto');
+      mv.setAttribute('touch-action', 'none');
       if (!r.requestId) mv.setAttribute('src', r.url);
+      installModelViewerGestures(mv);
       ensureModelViewer();
       return mv;
     }
