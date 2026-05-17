@@ -53,6 +53,7 @@
   }
 
   var sourceRaw = '';
+  var sourceDisplayText = '';
   var sourceCheckpoint = '';
   var sourceEditMode = false;
   var sourceDirty = false;
@@ -60,6 +61,7 @@
   var sourceVersion = 0;
   var sourceFindMatches = [];
   var sourceFindIndex = -1;
+  var sourceFindNeedle = '';
 
   function requestInspectorResize(mode) {
     try {
@@ -68,6 +70,108 @@
         payload: { mode: mode || 'normal' }
       }));
     } catch (e) {}
+  }
+
+  function markSourceRanges(root, matches, currentIndex, needleLength) {
+    if (!root || !matches.length || !needleLength) return;
+    var ranges = matches.map(function (start, index) {
+      return { start: start, end: start + needleLength, current: index === currentIndex };
+    });
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    var nodes = [];
+    var offset = 0;
+    var node;
+    while ((node = walker.nextNode())) {
+      var text = node.nodeValue || '';
+      nodes.push({ node: node, start: offset, end: offset + text.length });
+      offset += text.length;
+    }
+
+    nodes.forEach(function (entry) {
+      var overlaps = ranges.filter(function (range) {
+        return range.start < entry.end && range.end > entry.start;
+      });
+      if (!overlaps.length) return;
+      overlaps.sort(function (a, b) { return a.start - b.start; });
+
+      var text = entry.node.nodeValue || '';
+      var frag = document.createDocumentFragment();
+      var cursor = 0;
+      overlaps.forEach(function (range) {
+        var start = Math.max(0, range.start - entry.start);
+        var end = Math.min(text.length, range.end - entry.start);
+        if (start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, start)));
+        var mark = document.createElement('mark');
+        mark.className = 'source-find-match' + (range.current ? ' source-find-current' : '');
+        mark.textContent = text.slice(start, end);
+        frag.appendChild(mark);
+        cursor = end;
+      });
+      if (cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+      entry.node.parentNode.replaceChild(frag, entry.node);
+    });
+  }
+
+  function renderSourceCode(code, text, decorate) {
+    if (!code) return;
+    var renderSeq = (code.__netexRenderSeq || 0) + 1;
+    code.__netexRenderSeq = renderSeq;
+    code.textContent = text || '';
+    code.removeAttribute('data-highlighted');
+    ensureHighlight().then(function () {
+      if (code.__netexRenderSeq !== renderSeq) return;
+      try { hljs.highlightElement(code); } catch (e) {}
+      if (decorate) markSourceRanges(code, sourceFindMatches, sourceFindIndex, sourceFindNeedle.length);
+      if (decorate) scrollActiveSourceMatch();
+    }).catch(function () {
+      if (decorate) markSourceRanges(code, sourceFindMatches, sourceFindIndex, sourceFindNeedle.length);
+      if (decorate) scrollActiveSourceMatch();
+    });
+  }
+
+  function renderSourceEditorHighlight() {
+    var editor = document.getElementById('sourceEditor');
+    var code = document.getElementById('sourceEditorHighlight');
+    if (!editor || !code) return;
+    renderSourceCode(code, editor.value, sourceEditMode);
+  }
+
+  function renderSourceFindHighlights() {
+    if (sourceEditMode) {
+      renderSourceEditorHighlight();
+    } else {
+      renderSourceCode(document.querySelector('#source-tab .source-view code'), sourceDisplayText, true);
+    }
+  }
+
+  function syncSourceEditorScroll() {
+    var editor = document.getElementById('sourceEditor');
+    var highlight = document.querySelector('.source-editor-highlight');
+    if (!editor || !highlight) return;
+    highlight.scrollTop = editor.scrollTop;
+    highlight.scrollLeft = editor.scrollLeft;
+  }
+
+  function scrollEditorToOffset(offset) {
+    var editor = document.getElementById('sourceEditor');
+    if (!editor) return;
+    var before = editor.value.slice(0, offset).split('\n');
+    var line = before.length - 1;
+    var column = before[before.length - 1].length;
+    var lineHeight = 12.8;
+    var charWidth = 6.4;
+    editor.scrollTop = Math.max(0, (line * lineHeight) - (editor.clientHeight * 0.38));
+    editor.scrollLeft = Math.max(0, (column * charWidth) - (editor.clientWidth * 0.25));
+    syncSourceEditorScroll();
+  }
+
+  function scrollActiveSourceMatch() {
+    if (sourceEditMode) {
+      syncSourceEditorScroll();
+      return;
+    }
+    var active = document.querySelector('#source-tab .source-find-current');
+    if (active) active.scrollIntoView({ block: 'center', inline: 'center' });
   }
 
   function setSource(html) {
@@ -88,7 +192,8 @@
         });
       } catch (e) { /* fall back to raw */ }
     }
-    newCode.textContent = formatted;
+    sourceDisplayText = formatted;
+    renderSourceCode(newCode, sourceDisplayText, false);
     oldCode.parentNode.replaceChild(newCode, oldCode);
     if (!sourceEditMode) {
       var editor = document.getElementById('sourceEditor');
@@ -100,12 +205,9 @@
     ensureBeautifier().then(function () {
       if (version !== sourceVersion) return;
       if (typeof html_beautify === 'function') {
-        try { newCode.textContent = html_beautify(sourceRaw, { indent_size: 2, indent_with_tabs: false, preserve_newlines: true, max_preserve_newlines: 1, wrap_line_length: 0 }); } catch (e) {}
+        try { sourceDisplayText = html_beautify(sourceRaw, { indent_size: 2, indent_with_tabs: false, preserve_newlines: true, max_preserve_newlines: 1, wrap_line_length: 0 }); } catch (e) {}
       }
-      return ensureHighlight();
-    }).then(function () {
-      if (version !== sourceVersion) return;
-      try { hljs.highlightElement(newCode); } catch (e) {}
+      renderSourceCode(newCode, sourceDisplayText, !sourceEditMode);
     }).catch(function () {});
   }
 
@@ -138,6 +240,7 @@
       sourceDirty = false;
       sourceApplying = false;
       setSourceStatus('Editing live-session source. Apply rewrites this page only.');
+      renderSourceEditorHighlight();
       requestInspectorResize('source-edit');
       setTimeout(function () { editor.focus(); }, 0);
     } else {
@@ -583,11 +686,13 @@
     var count = document.getElementById('sourceFindCount');
     var editor = document.getElementById('sourceEditor');
     var query = input ? input.value : '';
-    var text = editor ? editor.value : sourceRaw;
+    var text = sourceEditMode && editor ? editor.value : sourceDisplayText;
     sourceFindMatches = [];
     sourceFindIndex = reset ? -1 : sourceFindIndex;
+    sourceFindNeedle = query;
     if (!query) {
       if (count) count.textContent = '0/0';
+      renderSourceFindHighlights();
       return;
     }
     var haystack = text.toLowerCase();
@@ -601,24 +706,28 @@
     }
     if (sourceFindIndex >= sourceFindMatches.length) sourceFindIndex = sourceFindMatches.length - 1;
     if (count) count.textContent = sourceFindMatches.length ? Math.max(sourceFindIndex + 1, 0) + '/' + sourceFindMatches.length : '0/0';
+    renderSourceFindHighlights();
   }
 
   function selectSourceMatch(direction) {
     var input = document.getElementById('sourceFind');
     var editor = document.getElementById('sourceEditor');
-    if (!input || !editor || !input.value) return;
-    if (!sourceEditMode) setSourceEditing(true);
+    if (!input || !input.value) return;
     refreshSourceFind(false);
     if (!sourceFindMatches.length) return;
     sourceFindIndex = sourceFindIndex === -1
       ? (direction < 0 ? sourceFindMatches.length - 1 : 0)
       : (sourceFindIndex + direction + sourceFindMatches.length) % sourceFindMatches.length;
     var start = sourceFindMatches[sourceFindIndex];
-    var end = start + input.value.length;
-    editor.focus();
-    editor.setSelectionRange(start, end);
+    if (sourceEditMode && editor) {
+      var end = start + input.value.length;
+      editor.focus();
+      editor.setSelectionRange(start, end);
+      scrollEditorToOffset(start);
+    }
     var count = document.getElementById('sourceFindCount');
     if (count) count.textContent = (sourceFindIndex + 1) + '/' + sourceFindMatches.length;
+    renderSourceFindHighlights();
   }
 
   function findInSource(direction) {
@@ -682,8 +791,10 @@
       sourceDirty = true;
       setSourceStatus('Editing live-session source.');
       updateSourceButtons();
+      renderSourceEditorHighlight();
       refreshSourceFind(false);
     });
+    editor.addEventListener('scroll', syncSourceEditorScroll);
     if (find) {
       find.addEventListener('input', function () { refreshSourceFind(true); });
       find.addEventListener('keydown', function (e) {

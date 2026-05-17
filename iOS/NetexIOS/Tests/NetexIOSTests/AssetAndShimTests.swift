@@ -113,9 +113,9 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(shell.contains("body { margin:0; padding:0; font-family:sans-serif; font-size:12px; color:var(--fg); background:var(--panel-bg);"))
         XCTAssertTrue(shell.contains("#source-tab .source-view { flex:1; min-height:0; overflow:auto; background:var(--panel-bg);"))
         XCTAssertTrue(shell.contains("#source-tab pre { margin:0; padding:6px 8px; font-size:10.5px; line-height:1.22; white-space:pre; word-wrap:normal; overflow-wrap:normal; tab-size:2;"))
-        XCTAssertTrue(shell.contains("#sourceEditor { display:none; flex:1; min-height:0; box-sizing:border-box; width:100%; resize:none; border:0; outline:none; padding:6px 8px; background:var(--panel-bg);"))
-        XCTAssertTrue(shell.contains("font:10.5px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2; -webkit-text-size-adjust:100%;"))
-        XCTAssertTrue(shell.contains("-webkit-appearance:none; caret-color:#93c5fd;"))
+        XCTAssertTrue(shell.contains("#source-tab .source-editor-wrap { display:none; position:relative; flex:1; min-height:0; overflow:hidden; background:var(--panel-bg);"))
+        XCTAssertTrue(shell.contains(".source-editor-highlight, #sourceEditor { position:absolute; inset:0; box-sizing:border-box; width:100%; height:100%; margin:0; border:0; padding:6px 8px; font:10.5px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre; overflow:auto; overflow-wrap:normal; tab-size:2;"))
+        XCTAssertTrue(shell.contains("-webkit-text-size-adjust:100%; -webkit-appearance:none; caret-color:#93c5fd;"))
     }
 
     func testSourceEditorRequestsTallInspectorAndProvidesFindControls() {
@@ -131,5 +131,32 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(script.contains("findInSource"))
         XCTAssertTrue(script.contains("selectSourceMatch"))
         XCTAssertTrue(script.contains("sourceFindMatches"))
+    }
+
+    func testSourceEditModeKeepsSyntaxHighlightedOverlay() {
+        let script = AssetLoader.text("panel", ext: "js")
+        let shell = AssetLoader.text("panel-shell", ext: "html")
+
+        XCTAssertTrue(shell.contains("sourceEditorWrap"))
+        XCTAssertTrue(shell.contains("sourceEditorHighlight"))
+        XCTAssertTrue(shell.contains("#source-tab.editing .source-editor-wrap { display:block;"))
+        XCTAssertTrue(shell.contains("-webkit-text-fill-color:transparent;"))
+        XCTAssertTrue(shell.contains(".source-editor-highlight"))
+        XCTAssertTrue(script.contains("renderSourceEditorHighlight"))
+        XCTAssertTrue(script.contains("syncSourceEditorScroll"))
+        XCTAssertTrue(script.contains("sourceEditorHighlight"))
+    }
+
+    func testSourceFindMarksMatchesAndScrollsCurrentResult() {
+        let script = AssetLoader.text("panel", ext: "js")
+        let shell = AssetLoader.text("panel-shell", ext: "html")
+
+        XCTAssertTrue(shell.contains("source-find-match"))
+        XCTAssertTrue(shell.contains("source-find-current"))
+        XCTAssertTrue(script.contains("markSourceRanges"))
+        XCTAssertTrue(script.contains("scrollActiveSourceMatch"))
+        XCTAssertTrue(script.contains("renderSourceFindHighlights"))
+        XCTAssertTrue(script.contains("scrollEditorToOffset"))
+        XCTAssertTrue(script.contains("findInSource(e.shiftKey ? -1 : 1)"))
     }
 }
