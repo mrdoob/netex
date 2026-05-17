@@ -90,4 +90,19 @@ final class AssetAndShimTests: XCTestCase {
         XCTAssertTrue(shell.contains(".model-preview-trigger"))
         XCTAssertTrue(shell.contains(".hidden-model-viewer-slot"))
     }
+
+    func testPanelSourceEditModeUsesLiveSessionCheckpointAndEvalBridge() {
+        let script = AssetLoader.text("panel", ext: "js")
+        let shell = AssetLoader.text("panel-shell", ext: "html")
+
+        XCTAssertTrue(shell.contains("sourceEditor"))
+        XCTAssertTrue(shell.contains("sourceApply"))
+        XCTAssertTrue(shell.contains("sourceRevert"))
+        XCTAssertTrue(script.contains("sourceCheckpoint"))
+        XCTAssertTrue(script.contains("sourceWriteScript"))
+        XCTAssertTrue(script.contains("source-apply"))
+        XCTAssertTrue(script.contains("source-revert"))
+        XCTAssertTrue(script.contains("postPanelEval"))
+        XCTAssertTrue(script.contains("document.open();document.write(html);document.close()"))
+    }
 }

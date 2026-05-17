@@ -52,14 +52,23 @@
     document.getElementById('network-tab').classList.toggle('active', tab === 'network');
   }
 
+  var sourceRaw = '';
+  var sourceCheckpoint = '';
+  var sourceEditMode = false;
+  var sourceDirty = false;
+  var sourceApplying = false;
+  var sourceVersion = 0;
+
   function setSource(html) {
+    sourceRaw = html || '';
+    var version = ++sourceVersion;
     var oldCode = document.querySelector('#source-tab code');
     var newCode = document.createElement('code');
     newCode.className = 'language-html';
-    var formatted = html;
+    var formatted = sourceRaw;
     if (typeof html_beautify === 'function') {
       try {
-        formatted = html_beautify(html, {
+        formatted = html_beautify(sourceRaw, {
           indent_size: 2,
           indent_with_tabs: false,
           preserve_newlines: true,
@@ -70,14 +79,93 @@
     }
     newCode.textContent = formatted;
     oldCode.parentNode.replaceChild(newCode, oldCode);
+    if (!sourceEditMode) {
+      var editor = document.getElementById('sourceEditor');
+      if (editor) editor.value = sourceRaw;
+      sourceDirty = false;
+      setSourceStatus('Read-only snapshot');
+      updateSourceButtons();
+    }
     ensureBeautifier().then(function () {
+      if (version !== sourceVersion) return;
       if (typeof html_beautify === 'function') {
-        try { newCode.textContent = html_beautify(html, { indent_size: 2, indent_with_tabs: false, preserve_newlines: true, max_preserve_newlines: 1, wrap_line_length: 0 }); } catch (e) {}
+        try { newCode.textContent = html_beautify(sourceRaw, { indent_size: 2, indent_with_tabs: false, preserve_newlines: true, max_preserve_newlines: 1, wrap_line_length: 0 }); } catch (e) {}
       }
       return ensureHighlight();
     }).then(function () {
+      if (version !== sourceVersion) return;
       try { hljs.highlightElement(newCode); } catch (e) {}
     }).catch(function () {});
+  }
+
+  function setSourceStatus(text) {
+    var status = document.getElementById('sourceStatus');
+    if (status) status.textContent = text;
+  }
+
+  function updateSourceButtons() {
+    var edit = document.getElementById('sourceEdit');
+    var apply = document.getElementById('sourceApply');
+    var revert = document.getElementById('sourceRevert');
+    if (edit) edit.disabled = sourceEditMode;
+    if (apply) apply.disabled = sourceApplying || !sourceEditMode || !sourceDirty;
+    if (revert) revert.disabled = sourceApplying || !sourceEditMode;
+  }
+
+  function setSourceEditing(enabled) {
+    var tab = document.getElementById('source-tab');
+    var editor = document.getElementById('sourceEditor');
+    if (!tab || !editor) return;
+    sourceEditMode = !!enabled;
+    tab.classList.toggle('editing', sourceEditMode);
+    if (sourceEditMode) {
+      sourceCheckpoint = sourceRaw;
+      editor.value = sourceRaw;
+      sourceDirty = false;
+      sourceApplying = false;
+      setSourceStatus('Editing live-session source. Apply rewrites this page only.');
+      setTimeout(function () { editor.focus(); }, 0);
+    } else {
+      sourceDirty = false;
+      setSourceStatus('Read-only snapshot');
+    }
+    updateSourceButtons();
+  }
+
+  function sourceWriteScript(html) {
+    return "(function(){var html=" + JSON.stringify(html) + ";document.open();document.write(html);document.close();return 'Source applied';})()";
+  }
+
+  function applySourceEdit() {
+    var editor = document.getElementById('sourceEditor');
+    if (!editor || !sourceEditMode) return;
+    sourceApplying = true;
+    setSourceStatus('Applying source to live page...');
+    updateSourceButtons();
+    try {
+      postPanelEval(sourceWriteScript(editor.value), 'source-apply');
+    } catch (e) {
+      sourceApplying = false;
+      updateSourceButtons();
+      setSourceStatus('Apply failed: ' + String(e));
+    }
+  }
+
+  function revertSourceEdit() {
+    var editor = document.getElementById('sourceEditor');
+    if (!editor || !sourceEditMode) return;
+    editor.value = sourceCheckpoint;
+    sourceDirty = false;
+    sourceApplying = true;
+    setSourceStatus('Reverting to edit checkpoint...');
+    updateSourceButtons();
+    try {
+      postPanelEval(sourceWriteScript(sourceCheckpoint), 'source-revert');
+    } catch (e) {
+      sourceApplying = false;
+      updateSourceButtons();
+      setSourceStatus('Revert failed: ' + String(e));
+    }
   }
 
   var totalBytes = 0;
@@ -336,6 +424,7 @@
   var MAX_CONSOLE_ENTRIES = 1000;
   var MAX_HISTORY = 100;
   var pendingEvals = new Set();
+  var pendingEvalTargets = new Map();
   var evalSeq = 0;
   var history = [];
   var historyCursor = -1;
@@ -419,6 +508,20 @@
     document.getElementById('consoleEntries').replaceChildren();
   }
 
+  function postPanelEval(source, target) {
+    var evalId = (target || 'e') + '-' + (++evalSeq);
+    pendingEvals.add(evalId);
+    pendingEvalTargets.set(evalId, target || 'console');
+    try {
+      AndroidPanel.postMessage(JSON.stringify({ type: 'eval', evalId: evalId, source: source }));
+      return evalId;
+    } catch (e) {
+      pendingEvals.delete(evalId);
+      pendingEvalTargets.delete(evalId);
+      throw e;
+    }
+  }
+
   function submitEval(source) {
     if (!source) return;
     // Pin to bottom when the user runs a command — they want to see the result, even
@@ -429,21 +532,33 @@
     historyCursor = -1;
     draft = '';
     appendConsoleEntry({ level: 'input', message: source });
-    var evalId = 'e-' + (++evalSeq);
-    pendingEvals.add(evalId);
     try {
-      AndroidPanel.postMessage(JSON.stringify({ type: 'eval', evalId: evalId, source: source }));
+      postPanelEval(source, 'console');
     } catch (e) {
       appendConsoleEntry({ level: 'result_error', message: String(e) });
-      pendingEvals.delete(evalId);
     }
   }
 
   function deliverEvalResult(evalId, resultJson) {
     if (!pendingEvals.delete(evalId)) return;
+    var target = pendingEvalTargets.get(evalId);
+    pendingEvalTargets.delete(evalId);
     var parsed;
     try { parsed = JSON.parse(resultJson); } catch (e) { parsed = [false, 'unparseable result: ' + resultJson]; }
     if (!Array.isArray(parsed)) parsed = [false, 'unexpected result shape'];
+    if (target === 'source-apply' || target === 'source-revert') {
+      sourceApplying = false;
+      if (parsed[0]) {
+        sourceRaw = document.getElementById('sourceEditor') ? document.getElementById('sourceEditor').value : sourceRaw;
+        sourceDirty = false;
+        setSourceStatus(target === 'source-apply' ? 'Applied to live page.' : 'Reverted to edit checkpoint.');
+        updateSourceButtons();
+      } else {
+        setSourceStatus((target === 'source-apply' ? 'Apply' : 'Revert') + ' failed: ' + String(parsed[1]));
+        updateSourceButtons();
+      }
+      return;
+    }
     appendConsoleEntry({ level: parsed[0] ? 'result' : 'result_error', message: String(parsed[1]) });
   }
 
@@ -487,6 +602,23 @@
     });
   }
   wireConsolePrompt();
+
+  function wireSourceEditor() {
+    var edit = document.getElementById('sourceEdit');
+    var apply = document.getElementById('sourceApply');
+    var revert = document.getElementById('sourceRevert');
+    var editor = document.getElementById('sourceEditor');
+    if (!edit || !apply || !revert || !editor) return;
+    edit.addEventListener('click', function () { setSourceEditing(true); });
+    apply.addEventListener('click', applySourceEdit);
+    revert.addEventListener('click', revertSourceEdit);
+    editor.addEventListener('input', function () {
+      sourceDirty = true;
+      setSourceStatus('Editing live-session source.');
+      updateSourceButtons();
+    });
+  }
+  wireSourceEditor();
 
   function wireModelPreviewOverlay() {
     var close = document.getElementById('modelOverlayClose');

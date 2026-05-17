@@ -518,7 +518,7 @@ final class BrowserViewController: UIViewController {
     }
 
     private func handlePanelEval(_ envelope: BridgeEnvelope) {
-        let evalID = envelope.id ?? envelope.payload["id"] as? String ?? UUID().uuidString
+        let evalID = envelope.id ?? envelope.payload["id"] as? String ?? envelope.payload["evalId"] as? String ?? UUID().uuidString
         guard let source = envelope.payload["source"] as? String else { return }
         pageView.evaluateJavaScript(source) { [weak self] value, error in
             let result: [Any] = {

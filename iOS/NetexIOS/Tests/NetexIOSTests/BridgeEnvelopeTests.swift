@@ -68,4 +68,18 @@ final class BridgeEnvelopeTests: XCTestCase {
         XCTAssertEqual(envelope.type, .networkBatch)
         XCTAssertEqual(entries.first?["url"] as? String, "https://threejs.org/examples/")
     }
+
+    func testPanelEvalPreservesLegacyEvalId() throws {
+        let body: [String: Any] = [
+            "type": "eval",
+            "evalId": "source-apply-1",
+            "source": "document.title"
+        ]
+
+        let envelope = try XCTUnwrap(BridgeEnvelope(body, fallbackSource: "panel"))
+
+        XCTAssertEqual(envelope.type, .panelEval)
+        XCTAssertEqual(envelope.id, "source-apply-1")
+        XCTAssertEqual(envelope.payload["source"] as? String, "document.title")
+    }
 }

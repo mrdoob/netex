@@ -51,7 +51,7 @@ struct BridgeEnvelope: Equatable {
         let payload = object["payload"] as? [String: Any] ?? object
         self.init(
             type: type,
-            id: object["id"] as? String ?? object["requestId"] as? String,
+            id: object["id"] as? String ?? object["evalId"] as? String ?? object["requestId"] as? String,
             source: object["source"] as? String ?? fallbackSource,
             timestamp: object["timestamp"] as? TimeInterval ?? Date().timeIntervalSince1970,
             payload: payload

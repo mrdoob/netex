@@ -11,7 +11,7 @@ The Android app remains the upstream implementation. This target keeps the same 
 - Curated Three.js entry points for the examples gallery, animated model, and glTF loader, with custom URL entry kept in the advanced menu.
 - Reload control and back/forward swipe gestures through `WKWebView`.
 - Console panel with batched injected `console.*` forwarding.
-- Source panel using `document.documentElement.outerHTML`, with local lazy-loaded beautifier/highlighter assets.
+- Source panel using `document.documentElement.outerHTML`, with local lazy-loaded beautifier/highlighter assets and an experimental live-session edit mode. Source edits apply by rewriting the current page document only; they are not persisted to bundled examples or upstream files, and the panel keeps a one-tap in-memory Revert checkpoint from the moment editing starts.
 - Network panel using injected `fetch` / `XMLHttpRequest` capture, blob preview storage, and a single full-screen lazy model preview that uses `model-viewer`'s native one-finger orbit and two-finger pan.
 - Three.js panel backed by vendored `threejs-devtools/` assets and iOS chrome-shim routing.
 - Bundle-backed `netex-assets://` scheme for panel, vendor, and Three.js DevTools resources.
