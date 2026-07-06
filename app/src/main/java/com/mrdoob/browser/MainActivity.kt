@@ -625,8 +625,12 @@ class MainActivity : AppCompatActivity() {
             startHeight = binding.bottomPanel.layoutParams.height
         }
         // Y axis grows downward → up-drag has negative dy → panel grows.
+        // The page WebView keeps a minimum height — collapsed to zero, pages
+        // see a zero-sized viewport (WebGPU swapchains reject it outright).
+        val minPageHeight = (96 * resources.displayMetrics.density).toInt()
         val onMove: (Float) -> Unit = { dy ->
-            setPanelHeight((startHeight - dy.toInt()).coerceAtLeast(0))
+            val maxPanel = binding.root.height - binding.chromeContainer.height - minPageHeight
+            setPanelHeight((startHeight - dy.toInt()).coerceIn(0, maxPanel.coerceAtLeast(0)))
         }
         val onEnd: (Float) -> Unit = { /* stay where released */ }
         binding.chromeContainer.onDragStart = onStart
